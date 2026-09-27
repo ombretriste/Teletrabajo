@@ -4,9 +4,10 @@ App web instalable (PWA) para llevar el control de los días de teletrabajo por 
 
 ## Funcionamiento
 
-- Calendario de cada trimestre (T1: ene–mar, T2: abr–jun, T3: jul–sep, T4: oct–dic).
+- Calendario de cada trimestre (Q1: ene–mar, Q2: abr–jun, Q3: jul–sep, Q4: oct–dic).
 - Festivos nacionales de España marcados automáticamente (incluido Viernes Santo, que se calcula cada año).
-- Cada día laborable se puede marcar como 🏠 teletrabajo, 🏢 oficina, 🌴 día libre o 🎉 festivo (para los autonómicos o locales).
+- Cada día laborable se puede marcar como 🏠 teletrabajo, 🌴 día libre o 🎉 festivo (para los autonómicos o locales). Los días sin marcar cuentan como presenciales.
+- Tema claro u oscuro: por defecto sigue el del móvil y se puede fijar a mano en «Apariencia».
 - **Días laborables** = días entre semana − festivos − días libres.
 - **Días permitidos** = 40% de los laborables, redondeado hacia abajo.
 - **Disponibles** = permitidos − días de teletrabajo ya marcados.

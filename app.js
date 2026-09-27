@@ -1,10 +1,12 @@
 'use strict';
 
 const STORAGE_KEY = 'teletrabajo:v1';
+const THEME_KEY = 'teletrabajo:theme';
 const RATIO = 0.4;
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-const STATE_ICONS = { tele: '🏠', office: '🏢', off: '🌴', holiday: '🎉' };
+const STATES = ['tele', 'off', 'holiday'];
+const STATE_ICONS = { tele: '🏠', off: '🌴', holiday: '🎉' };
 
 // ---------- Fechas ----------
 
@@ -60,11 +62,20 @@ function nationalHolidays(year) {
 
 // ---------- Estado ----------
 
+// Descarta estados que ya no existen (p. ej. el antiguo «oficina»)
+function cleanDays(days) {
+  const out = {};
+  for (const [key, state] of Object.entries(days)) {
+    if (STATES.includes(state)) out[key] = state;
+  }
+  return out;
+}
+
 function loadData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const parsed = raw ? JSON.parse(raw) : null;
-    if (parsed && typeof parsed.days === 'object') return parsed;
+    if (parsed && typeof parsed.days === 'object') return { days: cleanDays(parsed.days) };
   } catch (_) { /* almacenamiento no disponible */ }
   return { days: {} };
 }
@@ -91,7 +102,7 @@ function effectiveState(key) {
 // ---------- Cálculo ----------
 
 function quarterStats(year, quarter) {
-  const s = { working: 0, tele: 0, office: 0, off: 0, holiday: 0, pending: 0 };
+  const s = { working: 0, tele: 0, off: 0, holiday: 0 };
   const start = new Date(year, quarter * 3, 1);
   const end = new Date(year, quarter * 3 + 3, 1);
   for (const d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
@@ -101,8 +112,6 @@ function quarterStats(year, quarter) {
     if (state === 'off') { s.off++; continue; }
     s.working++;
     if (state === 'tele') s.tele++;
-    else if (state === 'office') s.office++;
-    else s.pending++;
   }
   s.allowedExact = s.working * RATIO;
   s.allowed = Math.floor(s.allowedExact + 1e-9);
@@ -117,7 +126,7 @@ const $ = (id) => document.getElementById(id);
 
 function render() {
   const { year, quarter } = view;
-  $('quarter-label').textContent = `T${quarter + 1} ${year}`;
+  $('quarter-label').textContent = `Q${quarter + 1} ${year}`;
   $('quarter-range').textContent = `${MONTHS[quarter * 3]} – ${MONTHS[quarter * 3 + 2]}`;
   renderSummary(quarterStats(year, quarter));
   renderMonths(year, quarter);
@@ -142,10 +151,8 @@ function renderSummary(s) {
   $('s-working').textContent = s.working;
   $('s-allowed').textContent = s.allowed;
   $('s-tele').textContent = s.tele;
-  $('s-office').textContent = s.office;
   $('s-off').textContent = s.off;
   $('s-holiday').textContent = s.holiday;
-  $('s-pending').textContent = s.pending;
   $('s-pct').textContent = `${s.pct.toFixed(0)}%`;
 }
 
@@ -215,7 +222,7 @@ function renderMonths(year, quarter) {
 }
 
 function stateName(state) {
-  return { tele: 'teletrabajo', office: 'oficina', off: 'día libre', holiday: 'festivo' }[state];
+  return { tele: 'teletrabajo', off: 'día libre', holiday: 'festivo' }[state];
 }
 
 function renderHolidayList(year, quarter) {
@@ -298,7 +305,7 @@ $('import-input').addEventListener('change', async (e) => {
     const parsed = JSON.parse(await file.text());
     if (!parsed || typeof parsed.days !== 'object') throw new Error('formato');
     if (!confirm('Esto sustituirá los datos actuales de este dispositivo. ¿Continuar?')) return;
-    data = { days: parsed.days };
+    data = { days: cleanDays(parsed.days) };
     saveData();
     render();
   } catch (_) {
@@ -307,6 +314,49 @@ $('import-input').addEventListener('change', async (e) => {
     e.target.value = '';
   }
 });
+
+// ---------- Tema (automático / claro / oscuro) ----------
+
+const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+function getThemePref() {
+  try {
+    const t = localStorage.getItem(THEME_KEY);
+    return t === 'light' || t === 'dark' ? t : 'auto';
+  } catch (_) {
+    return 'auto';
+  }
+}
+
+function applyTheme(pref) {
+  if (pref === 'auto') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = pref;
+  const dark = pref === 'dark' || (pref === 'auto' && darkQuery.matches);
+  $('theme-color').setAttribute('content', dark ? '#0a1630' : '#00205b');
+  document.querySelectorAll('#theme-picker button').forEach((b) => {
+    const active = b.dataset.theme === pref;
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-checked', String(active));
+  });
+}
+
+$('theme-picker').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-theme]');
+  if (!btn) return;
+  const pref = btn.dataset.theme;
+  try {
+    if (pref === 'auto') localStorage.removeItem(THEME_KEY);
+    else localStorage.setItem(THEME_KEY, pref);
+  } catch (_) { /* sin almacenamiento: se aplica solo en esta sesión */ }
+  applyTheme(pref);
+});
+darkQuery.addEventListener('change', () => applyTheme(getThemePref()));
+applyTheme(getThemePref());
+
+// ---------- Sin zoom (Safari en iOS ignora user-scalable=no) ----------
+
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
 
 render();
 
