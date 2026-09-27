@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Teletrabajo 40%</title>
+  <meta name="description" content="Control trimestral de días de teletrabajo (40%) con festivos nacionales de España." />
+  <meta name="theme-color" content="#2563eb" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Teletrabajo" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <button class="nav-btn" id="prev" aria-label="Trimestre anterior">‹</button>
+    <div class="quarter-title">
+      <h1 id="quarter-label">T1 2026</h1>
+      <span id="quarter-range">enero – marzo</span>
+    </div>
+    <button class="nav-btn" id="next" aria-label="Trimestre siguiente">›</button>
+  </header>
+
+  <main>
+    <section class="summary" aria-live="polite">
+      <div class="big-stat">
+        <span class="big-number" id="remaining">0</span>
+        <span class="big-label" id="remaining-label">días de teletrabajo disponibles</span>
+      </div>
+      <div class="progress" role="progressbar" aria-valuemin="0" id="progress">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <p class="progress-text" id="progress-text"></p>
+      <dl class="stats">
+        <div><dt>Laborables</dt><dd id="s-working">0</dd></div>
+        <div><dt>Permitidos (40%)</dt><dd id="s-allowed">0</dd></div>
+        <div><dt>Teletrabajo</dt><dd id="s-tele">0</dd></div>
+        <div><dt>Oficina</dt><dd id="s-office">0</dd></div>
+        <div><dt>Libres</dt><dd id="s-off">0</dd></div>
+        <div><dt>Festivos</dt><dd id="s-holiday">0</dd></div>
+        <div><dt>Sin marcar</dt><dd id="s-pending">0</dd></div>
+        <div><dt>% actual</dt><dd id="s-pct">0%</dd></div>
+      </dl>
+    </section>
+
+    <section class="brushes" aria-label="Tipo de día a marcar">
+      <p class="hint">Elige un tipo y toca los días del calendario:</p>
+      <div class="brush-row" id="brushes">
+        <button class="brush tele" data-brush="tele">🏠 Teletrabajo</button>
+        <button class="brush office" data-brush="office">🏢 Oficina</button>
+        <button class="brush off" data-brush="off">🌴 Libre</button>
+        <button class="brush holiday" data-brush="holiday">🎉 Festivo</button>
+        <button class="brush clear" data-brush="clear">✕ Borrar</button>
+      </div>
+    </section>
+
+    <section class="months" id="months"></section>
+
+    <section class="holiday-list">
+      <h2>Festivos nacionales del trimestre</h2>
+      <ul id="holiday-list"></ul>
+      <p class="note">Solo se incluyen los festivos nacionales comunes. Marca con 🎉 los autonómicos o locales de tu zona.</p>
+    </section>
+
+    <section class="data-tools">
+      <button id="today-btn">Ir al trimestre actual</button>
+      <button id="export-btn">Exportar copia</button>
+      <label class="file-btn">Importar copia<input type="file" id="import-input" accept="application/json" hidden /></label>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
