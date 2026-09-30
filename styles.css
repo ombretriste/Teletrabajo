@@ -65,11 +65,11 @@
   color-scheme: light;
 }
 
-/* Fondos (4 gamas de azul): colores de las manchas en RGB */
+/* Fondos (4 gamas): colores de las manchas en RGB */
 :root, :root[data-wall="glaciar"] { --c1: 96 165 250; --c2: 186 230 253; --c3: 56 189 248; --c4: 37 99 235; }
-:root[data-wall="cielo"]   { --c1: 14 165 233; --c2: 125 211 252; --c3: 34 211 238; --c4: 59 130 246; }
-:root[data-wall="marino"]  { --c1: 30 64 175;  --c2: 37 99 235;   --c3: 8 145 178;   --c4: 67 56 202; }
-:root[data-wall="lavanda"] { --c1: 99 102 241; --c2: 147 197 253; --c3: 167 139 250; --c4: 56 189 248; }
+:root[data-wall="coral"] { --c1: 248 113 113; --c2: 253 164 175; --c3: 251 146 60; --c4: 244 63 94; }
+:root[data-wall="menta"] { --c1: 52 211 153;  --c2: 134 239 172; --c3: 45 212 191; --c4: 22 163 74; }
+:root[data-wall="ambar"] { --c1: 251 191 36;  --c2: 253 224 71;  --c3: 251 146 60; --c4: 217 119 6; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 

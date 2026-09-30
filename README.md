@@ -13,15 +13,28 @@ App web instalable (PWA) para llevar el control de los días de teletrabajo por 
 - Tipos de día (se desmarcan volviendo a tocar el día):
   - **Teletrabajo**: suma 1.
   - **Medio día teletrabajo**: suma 0,5.
-  - **Libre**, **Vacaciones** y **Festivo**: no cuentan como laborables.
-  - **Otros** (baja, médico…): cuenta como laborable, pero no como teletrabajo.
-- **Días laborables** = días entre semana − festivos − días libres − vacaciones.
+  - **Libre**, **Vacaciones** y **Otros** (baja, médico…): cuentan como laborables sin teletrabajo, igual que ir a la oficina.
+  - **Festivo**: no cuenta como laborable.
+- **Días laborables** = días entre semana − festivos.
 - **Días permitidos** = 40% de los laborables, redondeado hacia abajo al medio día.
 - **Disponibles** = permitidos − teletrabajo marcado.
 
-En el menú ⋯ están las **opciones de visualización** (modo oscuro, claro o automático y cuatro fondos), ir al trimestre actual y **exportar/importar copia**.
+En el menú ⋯ están: ir al trimestre actual, **opciones de visualización** (modo oscuro, claro o automático y cuatro fondos: Glaciar, Coral, Menta y Ámbar) y **exportar/importar calendario**.
 
-Los datos se guardan en el propio dispositivo (`localStorage`). Para pasarlos a otro dispositivo, usa exportar e importar copia.
+Los datos se guardan en el propio dispositivo (`localStorage`). Para pasarlos a otro dispositivo, usa exportar e importar calendario.
+
+### Formato del calendario exportado
+
+Archivo de texto plano (`.txt`), una línea por día marcado con la fecha y el tipo separados por un tabulador. Las líneas que empiezan por `#` se ignoran:
+
+```
+# Q3 2026
+2026-07-01	Teletrabajo
+2026-07-02	Medio día teletrabajo
+2026-07-06	Vacaciones
+```
+
+Al importar se aceptan también espacios, `;` o `,` como separador, y el tipo sin tildes ni mayúsculas.
 
 ## Instalar en el móvil
 

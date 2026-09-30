@@ -7,7 +7,7 @@ const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 
 const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
 // tele: suma 1 al teletrabajo · half: suma 0,5 · other (baja, médico…): laborable sin teletrabajo
-// off, vacation y holiday no cuentan como laborables
+// off y vacation cuentan como laborables sin teletrabajo (como ir a la oficina); holiday no es laborable
 const STATES = {
   tele: { label: 'Teletrabajo', name: 'teletrabajo' },
   half: { label: 'Medio día teletrabajo', name: 'medio día de teletrabajo' },
@@ -16,7 +16,7 @@ const STATES = {
   holiday: { label: 'Festivo', name: 'festivo' },
   other: { label: 'Otros', name: 'otros (baja, médico…)' },
 };
-const NON_WORKING = ['off', 'vacation', 'holiday'];
+const NON_WORKING = ['holiday'];
 
 const ICONS = {
   // Tipos de día
@@ -165,6 +165,7 @@ function quarterStats(year, quarter) {
     const state = effectiveState(dateKey(d.getFullYear(), d.getMonth(), d.getDate()));
     if (NON_WORKING.includes(state)) { s[state]++; continue; }
     s.working++;
+    if (state === 'off' || state === 'vacation') s[state]++;
     if (state === 'tele') s.tele += 1;
     else if (state === 'half') s.tele += 0.5;
     else if (state === 'other') s.other++;
@@ -355,10 +356,10 @@ $('quarter-current').addEventListener('click', goToday);
 // ---------- Menú ⋯ ----------
 
 const MENU = [
-  { label: 'Opciones de visualización', icon: 'palette', run: () => openDisplaySheet() },
   { label: 'Ir al trimestre actual', icon: 'today', run: () => goToday() },
-  { label: 'Exportar copia', icon: 'download', run: () => exportData() },
-  { label: 'Importar copia', icon: 'upload', run: () => $('import-input').click() },
+  { label: 'Opciones de visualización', icon: 'palette', run: () => openDisplaySheet() },
+  { label: 'Exportar calendario', icon: 'download', run: () => exportCalendar() },
+  { label: 'Importar calendario', icon: 'upload', run: () => $('import-input').click() },
 ];
 
 function openMenu() {
@@ -391,28 +392,81 @@ document.addEventListener('click', (e) => {
 });
 window.addEventListener('resize', closeMenu);
 
-function exportData() {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+// ---------- Exportar / importar calendario (texto plano) ----------
+// Una línea por día marcado: «AAAA-MM-DD<tab>Tipo». Las líneas con # son comentarios.
+
+function calendarText() {
+  const keys = Object.keys(data.days).sort();
+  const lines = [
+    '# Up to 40% · calendario de teletrabajo',
+    `# Exportado el ${new Date().toLocaleDateString('es-ES')}`,
+    '# Formato: fecha (AAAA-MM-DD) y tipo, separados por un tabulador.',
+    `# Tipos: ${Object.values(STATES).map((s) => s.label).join(', ')}.`,
+    '# Los festivos nacionales se marcan solos y no hace falta incluirlos.',
+  ];
+  let section = '';
+  for (const key of keys) {
+    const q = `Q${Math.floor((Number(key.slice(5, 7)) - 1) / 3) + 1} ${key.slice(0, 4)}`;
+    if (q !== section) {
+      section = q;
+      lines.push('', `# ${q}`);
+    }
+    lines.push(`${key}\t${STATES[data.days[key]].label}`);
+  }
+  return lines.join('\n') + '\n';
+}
+
+async function exportCalendar() {
+  const name = `up-to-40-calendario-${todayKey()}.txt`;
+  const file = new File([calendarText()], name, { type: 'text/plain' });
+  // En el móvil, el menú Compartir permite «Guardar en Archivos» o enviarlo
+  if (matchMedia('(pointer: coarse)').matches && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'Calendario Up to 40%' });
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+    }
+  }
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `up-to-40-${todayKey()}.json`;
+  a.href = URL.createObjectURL(file);
+  a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// Acepta la etiqueta («Medio día teletrabajo») o la clave interna («half»), sin distinguir mayúsculas ni tildes
+const normalize = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+const STATE_BY_NAME = Object.fromEntries(Object.entries(STATES).flatMap(([k, s]) => [[normalize(s.label), k], [k, k]]));
+
+function parseCalendar(text) {
+  // Copias antiguas en JSON
+  if (text.trim().startsWith('{')) return cleanDays(JSON.parse(text).days);
+  const days = {};
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const m = line.match(/^(\d{4}-\d{2}-\d{2})[\s\t;,|·-]+(.+)$/);
+    const state = m && STATE_BY_NAME[normalize(m[2])];
+    if (state) days[m[1]] = state;
+  }
+  return days;
 }
 
 $('import-input').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
   try {
-    const parsed = JSON.parse(await file.text());
-    if (!parsed || typeof parsed.days !== 'object') throw new Error('formato');
-    if (!confirm('Esto sustituirá los datos actuales de este dispositivo. ¿Continuar?')) return;
-    data = { days: cleanDays(parsed.days) };
+    const days = parseCalendar(await file.text());
+    const count = Object.keys(days).length;
+    if (!count) throw new Error('vacío');
+    if (!confirm(`Se importarán ${count} días y se sustituirá el calendario actual de este dispositivo. ¿Continuar?`)) return;
+    data = { days };
     persist();
     render();
-    toast('Copia importada');
+    toast(`Calendario importado (${count} días)`);
   } catch (_) {
-    alert('El archivo no es una copia válida.');
+    alert('El archivo no contiene un calendario válido.');
   } finally {
     e.target.value = '';
   }
@@ -422,12 +476,13 @@ $('import-input').addEventListener('change', async (e) => {
 
 const WALLS = {
   glaciar: { name: 'Glaciar', c: ['96 165 250', '186 230 253', '56 189 248', '37 99 235'] },
-  cielo: { name: 'Cielo', c: ['14 165 233', '125 211 252', '34 211 238', '59 130 246'] },
-  marino: { name: 'Marino', c: ['30 64 175', '37 99 235', '8 145 178', '67 56 202'] },
-  lavanda: { name: 'Lavanda', c: ['99 102 241', '147 197 253', '167 139 250', '56 189 248'] },
+  coral: { name: 'Coral', c: ['248 113 113', '253 164 175', '251 146 60', '244 63 94'] },
+  menta: { name: 'Menta', c: ['52 211 153', '134 239 172', '45 212 191', '22 163 74'] },
+  ambar: { name: 'Ámbar', c: ['251 191 36', '253 224 71', '251 146 60', '217 119 6'] },
 };
 const lightQuery = matchMedia('(prefers-color-scheme: light)');
 let display = { theme: 'auto', wall: 'glaciar', ...load(DISPLAY_KEY, {}) };
+if (!WALLS[display.wall]) display.wall = 'glaciar'; // fondos que ya no existen
 
 function applyDisplay() {
   const light = display.theme === 'light' || (display.theme === 'auto' && lightQuery.matches);
