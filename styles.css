@@ -24,6 +24,8 @@
   --holiday-bg: rgba(244, 114, 182, 0.24);
   --other: #fbbf6a;
   --other-bg: rgba(251, 191, 36, 0.22);
+  --vacation: #c4b5fd;
+  --vacation-bg: rgba(167, 139, 250, 0.26);
   --weekend: rgba(255, 255, 255, 0.025);
   /* Fondo: intensidad de las manchas y de las ondas */
   --wall-a: 0.30;
@@ -54,6 +56,8 @@
   --holiday-bg: rgba(236, 72, 153, 0.14);
   --other: #b76e00;
   --other-bg: rgba(245, 158, 11, 0.18);
+  --vacation: #7c4ddb;
+  --vacation-bg: rgba(139, 92, 246, 0.15);
   --weekend: rgba(20, 60, 140, 0.03);
   --wall-a: 0.34;
   --ripple: 20 50 120;
@@ -290,28 +294,45 @@ main {
   border-top: 1px solid var(--line);
   text-align: center;
 }
-.mini-stats dt { font-size: 9px; letter-spacing: .06em; }
+.mini-stats dt { font-size: 9px; letter-spacing: .03em; }
 .mini-stats dd { margin: 3px 0 0; font-size: 16px; font-weight: 400; }
 
 /* Tipos de día */
 .brushes { position: sticky; top: calc(var(--top-h) + 8px); z-index: 10; }
 .hint { margin: 0 0 10px; font-size: 12px; color: var(--muted); }
-.brush-row { display: flex; flex-wrap: wrap; gap: 8px; }
-.brush {
-  padding: 9px 13px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: transparent;
-  font-size: 14px;
-  white-space: nowrap;
+.brush-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 8px;
 }
-.brush.tele { background: var(--tele-bg); }
-.brush.half { background: linear-gradient(135deg, var(--tele-bg) 50%, transparent 50%); }
-.brush.off { background: var(--off-bg); }
-.brush.holiday { background: var(--holiday-bg); }
-.brush.other { background: var(--other-bg); }
-.brush.active { border-color: var(--text); font-weight: 600; box-shadow: 0 0 0 1px var(--text) inset; }
-.half-mark { font-weight: 700; color: var(--tele); }
+.brush {
+  --c: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 78px;
+  padding: 10px 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: transparent;
+  text-align: center;
+}
+.brush-icon { display: grid; place-items: center; color: var(--c); }
+.brush-label { font-size: 12px; font-weight: 500; line-height: 1.2; }
+.brush.tele, .brush.half { --c: var(--tele); }
+.brush.off { --c: var(--off); }
+.brush.vacation { --c: var(--vacation); }
+.brush.holiday { --c: var(--holiday); }
+.brush.other { --c: var(--other); }
+.brush.active {
+  border-color: var(--c);
+  box-shadow: 0 0 0 1px var(--c) inset;
+  background: color-mix(in srgb, var(--c) 16%, transparent);
+}
+.brush.active .brush-label { font-weight: 600; }
 
 /* Calendario */
 .months {
@@ -343,14 +364,19 @@ main {
   gap: 1px;
 }
 .day .num { font-size: 15px; font-weight: 400; }
-.day .icon { font-size: 11px; line-height: 1; }
+.day .icon { display: grid; place-items: center; line-height: 0; }
 .day.weekend { background: var(--weekend); color: var(--muted); border-color: transparent; cursor: default; opacity: .6; }
 .day.tele { background: var(--tele-bg); border-color: color-mix(in srgb, var(--tele) 60%, transparent); }
 .day.half { background: linear-gradient(135deg, var(--tele-bg) 50%, transparent 50%); border-color: color-mix(in srgb, var(--tele) 60%, transparent); }
-.day.half .icon { font-size: 12px; font-weight: 700; color: var(--tele); }
+.day.tele .icon, .day.half .icon { color: var(--tele); }
+.day.off .icon { color: var(--off); }
+.day.vacation .icon { color: var(--vacation); }
+.day.holiday .icon { color: var(--holiday); }
+.day.other .icon { color: var(--other); }
 .day.off { background: var(--off-bg); border-color: color-mix(in srgb, var(--off) 60%, transparent); }
 .day.holiday { background: var(--holiday-bg); border-color: color-mix(in srgb, var(--holiday) 60%, transparent); }
 .day.other { background: var(--other-bg); border-color: color-mix(in srgb, var(--other) 60%, transparent); }
+.day.vacation { background: var(--vacation-bg); border-color: color-mix(in srgb, var(--vacation) 60%, transparent); }
 .day.national::after {
   content: '';
   position: absolute;
@@ -534,7 +560,8 @@ main {
 @media (max-width: 380px) {
   .wm-name { font-size: 46px; }
   .big-number { font-size: 52px; }
-  .brush { padding: 8px 11px; font-size: 13px; }
+  .brush { min-height: 72px; }
+  .brush-label { font-size: 11px; }
   main { padding: 12px; gap: 12px; }
   .card { padding: 14px 12px; }
   .grid { gap: 3px; }
@@ -543,4 +570,25 @@ main {
 
 @media (prefers-reduced-motion: reduce) {
   body.entering .app, body.entering .splash, body.entering .sp-top, body.entering .sp-bottom { animation-duration: .01s; }
+}
+
+/* ---------- Siempre en vertical: aviso al girar un móvil ---------- */
+.rotate-hint { display: none; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .rotate-hint {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: var(--bg);
+    color: var(--text);
+    text-align: center;
+  }
+  .rotate-hint svg { color: var(--accent); transform: rotate(-90deg); }
+  .rotate-hint p { margin: 0; font-size: 16px; font-weight: 300; letter-spacing: .02em; }
+  body { overflow: hidden; }
 }

@@ -7,16 +7,26 @@ const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 
 const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
 // tele: suma 1 al teletrabajo · half: suma 0,5 · other (baja, médico…): laborable sin teletrabajo
-// off y holiday no cuentan como laborables
+// off, vacation y holiday no cuentan como laborables
 const STATES = {
-  tele: { icon: '🏠', name: 'teletrabajo' },
-  half: { icon: '½', name: 'medio día de teletrabajo' },
-  off: { icon: '🌴', name: 'día libre' },
-  holiday: { icon: '🎉', name: 'festivo' },
-  other: { icon: '🏥', name: 'otros' },
+  tele: { label: 'Teletrabajo', name: 'teletrabajo' },
+  half: { label: 'Medio día teletrabajo', name: 'medio día de teletrabajo' },
+  off: { label: 'Libre', name: 'día libre' },
+  vacation: { label: 'Vacaciones', name: 'vacaciones' },
+  holiday: { label: 'Festivo', name: 'festivo' },
+  other: { label: 'Otros', name: 'otros (baja, médico…)' },
 };
+const NON_WORKING = ['off', 'vacation', 'holiday'];
 
 const ICONS = {
+  // Tipos de día
+  tele: '<path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>',
+  half: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/>',
+  off: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M9 15.5h6"/>',
+  vacation: '<circle cx="12" cy="12" r="3.8"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
+  holiday: '<path d="M5.5 21V3.5"/><path d="M5.5 4.5h12l-2.5 4 2.5 4h-12"/>',
+  other: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/>',
+  // Menú
   palette: '<path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.9 1.2-1.8-.5-1-.1-2.2 1.1-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/>',
   today: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="12" cy="15" r="1.6"/>',
   download: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5"/><path d="M4 17v1.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V17"/>',
@@ -147,14 +157,13 @@ function effectiveState(key) {
 // ---------- Cálculo ----------
 
 function quarterStats(year, quarter) {
-  const s = { working: 0, tele: 0, off: 0, holiday: 0, other: 0 };
+  const s = { working: 0, tele: 0, off: 0, vacation: 0, holiday: 0, other: 0 };
   const start = new Date(year, quarter * 3, 1);
   const end = new Date(year, quarter * 3 + 3, 1);
   for (const d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
     if (isWeekend(d)) continue;
     const state = effectiveState(dateKey(d.getFullYear(), d.getMonth(), d.getDate()));
-    if (state === 'holiday') { s.holiday++; continue; }
-    if (state === 'off') { s.off++; continue; }
+    if (NON_WORKING.includes(state)) { s[state]++; continue; }
     s.working++;
     if (state === 'tele') s.tele += 1;
     else if (state === 'half') s.tele += 0.5;
@@ -194,15 +203,15 @@ function renderSummary(s) {
   $('progress').setAttribute('aria-valuemax', String(s.allowed));
   $('progress').setAttribute('aria-valuenow', String(s.tele));
   $('progress-text').textContent =
-    `${fmt(s.tele)} de ${fmt(s.allowed)} días usados · 40% de ${s.working} laborables = ${s.allowedExact.toFixed(1).replace('.', ',')}`;
+    `${fmt(s.tele)} de ${fmt(s.allowed)} días usados (${s.pct.toFixed(0)}% actual) · 40% de ${s.working} laborables = ${s.allowedExact.toFixed(1).replace('.', ',')}`;
 
   $('s-working').textContent = s.working;
   $('s-allowed').textContent = fmt(s.allowed);
   $('s-tele').textContent = fmt(s.tele);
   $('s-off').textContent = s.off;
+  $('s-vacation').textContent = s.vacation;
   $('s-holiday').textContent = s.holiday;
   $('s-other').textContent = s.other;
-  $('s-pct').textContent = `${s.pct.toFixed(0)}%`;
 }
 
 function renderMonths(year, quarter) {
@@ -256,10 +265,7 @@ function renderMonths(year, quarter) {
         const state = effectiveState(key);
         if (state) {
           cell.classList.add(state);
-          const ic = document.createElement('span');
-          ic.className = 'icon';
-          ic.textContent = STATES[state].icon;
-          cell.appendChild(ic);
+          cell.insertAdjacentHTML('beforeend', `<span class="icon">${icon(state, 13)}</span>`);
         }
         cell.setAttribute('aria-label', `${d} de ${MONTHS[m]}${state ? ': ' + STATES[state].name : ''}${holidays[key] ? ' (' + holidays[key] + ')' : ''}`);
       }
@@ -312,6 +318,9 @@ $('months').addEventListener('click', (e) => {
   persist();
   render();
 });
+
+$('brushes').innerHTML = Object.entries(STATES).map(([key, s]) =>
+  `<button class="brush ${key}" type="button" data-brush="${key}"><span class="brush-icon">${icon(key, 22)}</span><span class="brush-label">${s.label}</span></button>`).join('');
 
 $('brushes').addEventListener('click', (e) => {
   const btn = e.target.closest('button.brush');
@@ -494,6 +503,11 @@ $('enter-btn').addEventListener('click', () => {
     body.classList.remove('booting', 'entering');
   }, 820);
 });
+
+// ---------- Siempre en vertical ----------
+// Android (app instalada) respeta la orientación del manifiesto y este bloqueo;
+// iOS no permite bloquearla, así que en horizontal se muestra un aviso para girar el móvil.
+try { screen.orientation?.lock?.('portrait').catch(() => {}); } catch (_) { /* no compatible */ }
 
 // ---------- Sin zoom (Safari en iOS ignora user-scalable=no) ----------
 
