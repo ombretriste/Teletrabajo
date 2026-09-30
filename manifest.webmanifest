@@ -1,12 +1,12 @@
 {
-  "name": "Teletrabajo 40%",
-  "short_name": "Teletrabajo",
+  "name": "Up to 40%",
+  "short_name": "Up to 40%",
   "description": "Control trimestral de días de teletrabajo con festivos nacionales de España.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#00205b",
-  "theme_color": "#00205b",
+  "background_color": "#07101f",
+  "theme_color": "#07101f",
   "lang": "es",
   "icons": [
     {

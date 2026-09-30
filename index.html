@@ -3,88 +3,118 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <title>Teletrabajo 40%</title>
+  <title>Up to 40%</title>
   <meta name="description" content="Control trimestral de días de teletrabajo (40%) con festivos nacionales de España." />
-  <meta name="theme-color" content="#00205b" id="theme-color" />
+  <meta name="theme-color" content="#07101f" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Teletrabajo" />
+  <meta name="apple-mobile-web-app-title" content="Up to 40%" />
+  <meta name="color-scheme" content="dark light" />
   <link rel="stylesheet" href="styles.css" />
   <script>
-    // Aplica el tema guardado antes de pintar para evitar parpadeos
+    // Aplica tema y fondo antes de pintar (evita un destello del tema equivocado)
     try {
-      var t = localStorage.getItem('teletrabajo:theme');
-      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
-    } catch (_) {}
+      var d = JSON.parse(localStorage.getItem('teletrabajo:display') || '{}');
+      var light = d.theme === 'light' || (d.theme !== 'dark' && matchMedia('(prefers-color-scheme: light)').matches);
+      document.documentElement.dataset.theme = light ? 'light' : 'dark';
+      document.documentElement.dataset.wall = d.wall || 'glaciar';
+    } catch (e) {}
   </script>
 </head>
-<body>
-  <header class="topbar">
-    <button class="nav-btn" id="prev" aria-label="Trimestre anterior">‹</button>
-    <div class="quarter-title">
-      <h1 id="quarter-label">Q1 2026</h1>
-      <span id="quarter-range">enero – marzo</span>
+<body class="booting">
+  <!-- Pantalla de inicio -->
+  <div id="splash" class="splash">
+    <div class="sp-top">
+      <span class="logo-slot" data-logo="132"></span>
+      <div class="wordmark">
+        <span class="wm-name">Up to <b>40%</b></span>
+        <span class="wm-by">by OmT Finance</span>
+      </div>
     </div>
-    <button class="nav-btn" id="next" aria-label="Trimestre siguiente">›</button>
-  </header>
+    <div class="sp-bottom">
+      <button id="enter-btn" class="sp-enter" type="button" aria-label="Entrar">
+        <svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg>
+      </button>
+      <p class="sp-label">Entrar</p>
+    </div>
+  </div>
 
-  <main>
-    <section class="summary" aria-live="polite">
-      <div class="big-stat">
-        <span class="big-number" id="remaining">0</span>
-        <span class="big-label" id="remaining-label">días de teletrabajo disponibles</span>
+  <!-- App -->
+  <div id="app" class="app">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <span class="logo-slot" data-logo="30"></span>
+        <span class="brand">Up to <b>40%</b></span>
       </div>
-      <div class="progress" role="progressbar" aria-valuemin="0" id="progress">
-        <div class="progress-fill" id="progress-fill"></div>
-      </div>
-      <p class="progress-text" id="progress-text"></p>
-      <dl class="stats">
-        <div><dt>Laborables</dt><dd id="s-working">0</dd></div>
-        <div><dt>Permitidos (40%)</dt><dd id="s-allowed">0</dd></div>
-        <div><dt>Teletrabajo</dt><dd id="s-tele">0</dd></div>
-        <div><dt>Libres</dt><dd id="s-off">0</dd></div>
-        <div><dt>Festivos</dt><dd id="s-holiday">0</dd></div>
-        <div><dt>% actual</dt><dd id="s-pct">0%</dd></div>
-      </dl>
-    </section>
+      <button id="menu-btn" class="icon-btn" aria-label="Más opciones" title="Más opciones" aria-haspopup="menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><g fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></g></svg>
+      </button>
+    </header>
 
-    <section class="brushes" aria-label="Tipo de día a marcar">
-      <p class="hint">Elige un tipo y toca los días del calendario:</p>
-      <div class="brush-row" id="brushes">
-        <button class="brush tele" data-brush="tele">🏠 Teletrabajo</button>
-        <button class="brush off" data-brush="off">🌴 Libre</button>
-        <button class="brush holiday" data-brush="holiday">🎉 Festivo</button>
-        <button class="brush clear" data-brush="clear">✕ Borrar</button>
-      </div>
-    </section>
+    <main>
+      <section class="card summary" aria-live="polite">
+        <p class="label">Disponibles este trimestre</p>
+        <div class="big-stat">
+          <span class="big-number" id="remaining">0</span>
+          <span class="big-label" id="remaining-label">días de teletrabajo</span>
+        </div>
+        <div class="progress" role="progressbar" aria-valuemin="0" id="progress">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <p class="progress-text" id="progress-text"></p>
+        <dl class="tiles">
+          <div><dt>Laborables</dt><dd id="s-working">0</dd></div>
+          <div><dt>Permitidos</dt><dd id="s-allowed">0</dd></div>
+          <div><dt>Teletrabajo</dt><dd id="s-tele">0</dd></div>
+        </dl>
+        <dl class="mini-stats">
+          <div><dt>Libres</dt><dd id="s-off">0</dd></div>
+          <div><dt>Festivos</dt><dd id="s-holiday">0</dd></div>
+          <div><dt>Otros</dt><dd id="s-other">0</dd></div>
+          <div><dt>% actual</dt><dd id="s-pct">0%</dd></div>
+        </dl>
+      </section>
 
-    <section class="months" id="months"></section>
+      <section class="card brushes" aria-label="Tipo de día a marcar">
+        <p class="hint">Elige un tipo y toca los días. Vuelve a tocar un día para desmarcarlo.</p>
+        <div class="brush-row" id="brushes">
+          <button class="brush tele" data-brush="tele">🏠 Teletrabajo</button>
+          <button class="brush half" data-brush="half"><span class="half-mark">½</span> Medio día</button>
+          <button class="brush off" data-brush="off">🌴 Libre</button>
+          <button class="brush holiday" data-brush="holiday">🎉 Festivo</button>
+          <button class="brush other" data-brush="other">🏥 Otros</button>
+        </div>
+      </section>
 
-    <section class="holiday-list">
-      <h2>Festivos nacionales del trimestre</h2>
-      <ul id="holiday-list"></ul>
-      <p class="note">Solo se incluyen los festivos nacionales comunes. Marca con 🎉 los autonómicos o locales de tu zona.</p>
-    </section>
+      <section class="months" id="months"></section>
 
-    <section class="appearance">
-      <h2>Apariencia</h2>
-      <div class="segmented" id="theme-picker" role="radiogroup" aria-label="Tema">
-        <button data-theme="auto" role="radio">Automático</button>
-        <button data-theme="light" role="radio">☀️ Claro</button>
-        <button data-theme="dark" role="radio">🌙 Oscuro</button>
-      </div>
-    </section>
+      <section class="card holiday-list">
+        <p class="label">Festivos nacionales del trimestre</p>
+        <ul id="holiday-list"></ul>
+        <p class="note">Solo se incluyen los festivos nacionales comunes. Marca con 🎉 los autonómicos o locales de tu zona. «Otros» (baja, médico…) cuenta como día laborable sin teletrabajo.</p>
+      </section>
+    </main>
 
-    <section class="data-tools">
-      <button id="today-btn">Ir al trimestre actual</button>
-      <button id="export-btn">Exportar copia</button>
-      <label class="file-btn">Importar copia<input type="file" id="import-input" accept="application/json" hidden /></label>
-    </section>
-  </main>
+    <nav class="quarterbar" aria-label="Trimestre">
+      <button class="icon-btn" id="prev" aria-label="Trimestre anterior">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <button class="quarter-title" id="quarter-current" title="Ir al trimestre actual">
+        <span id="quarter-label">Q1 2026</span>
+        <small id="quarter-range">enero – marzo</small>
+      </button>
+      <button class="icon-btn" id="next" aria-label="Trimestre siguiente">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </nav>
+  </div>
+
+  <div id="menu" class="menu" role="menu" hidden></div>
+  <input type="file" id="import-input" accept="application/json" hidden />
 
   <script src="app.js"></script>
 </body>

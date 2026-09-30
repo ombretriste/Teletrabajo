@@ -1,18 +1,58 @@
 'use strict';
 
 const STORAGE_KEY = 'teletrabajo:v1';
-const THEME_KEY = 'teletrabajo:theme';
+const DISPLAY_KEY = 'teletrabajo:display';
 const RATIO = 0.4;
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-const STATES = ['tele', 'off', 'holiday'];
-const STATE_ICONS = { tele: '🏠', off: '🌴', holiday: '🎉' };
+
+// tele: suma 1 al teletrabajo · half: suma 0,5 · other (baja, médico…): laborable sin teletrabajo
+// off y holiday no cuentan como laborables
+const STATES = {
+  tele: { icon: '🏠', name: 'teletrabajo' },
+  half: { icon: '½', name: 'medio día de teletrabajo' },
+  off: { icon: '🌴', name: 'día libre' },
+  holiday: { icon: '🎉', name: 'festivo' },
+  other: { icon: '🏥', name: 'otros' },
+};
+
+const ICONS = {
+  palette: '<path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.9 1.2-1.8-.5-1-.1-2.2 1.1-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/>',
+  today: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="12" cy="15" r="1.6"/>',
+  download: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5"/><path d="M4 17v1.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V17"/>',
+  upload: '<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5"/><path d="M4 17v1.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V17"/>',
+};
+const icon = (name, size = 22) =>
+  `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
+
+// Logo de Up to 40%: anillo fino, anillo discontinuo, arco del 40 % y casa de líneas finas
+let logoCount = 0;
+function logoSVG(size) {
+  const id = `u40-g${logoCount++}`;
+  return `
+    <svg class="logo-mark" viewBox="0 0 120 120" width="${size}" height="${size}" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <defs>
+        <linearGradient id="${id}" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stop-color="#3b7bff"/><stop offset=".55" stop-color="#5aa9ff"/><stop offset="1" stop-color="#a5dcff"/>
+        </linearGradient>
+      </defs>
+      <circle cx="60" cy="60" r="52" stroke="url(#${id})" stroke-width="1.2" opacity=".55"/>
+      <circle cx="60" cy="60" r="42" stroke="url(#${id})" stroke-width=".8" stroke-dasharray="2 5" opacity=".6"/>
+      <path d="M60 8 A52 52 0 0 1 90.56 102.07" stroke="url(#${id})" stroke-width="3"/>
+      <circle cx="90.56" cy="102.07" r="3" fill="#5aa9ff" stroke="none"/>
+      <path d="M38 62 L60 42 L82 62" stroke="url(#${id})" stroke-width="1.8"/>
+      <path d="M44 57 V80 H76 V57" stroke="url(#${id})" stroke-width="1.8"/>
+      <path d="M55 80 V69 H65 V80" stroke="url(#${id})" stroke-width="1.8"/>
+    </svg>`;
+}
+document.querySelectorAll('[data-logo]').forEach((el) => { el.innerHTML = logoSVG(Number(el.dataset.logo)); });
 
 // ---------- Fechas ----------
 
 const pad = (n) => String(n).padStart(2, '0');
 const dateKey = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
 const isWeekend = (date) => date.getDay() === 0 || date.getDay() === 6;
+const fmt = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.', ','));
 
 function todayKey() {
   const t = new Date();
@@ -60,38 +100,43 @@ function nationalHolidays(year) {
   return list;
 }
 
-// ---------- Estado ----------
+// ---------- Datos ----------
+
+function load(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function save(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
 
 // Descarta estados que ya no existen (p. ej. el antiguo «oficina»)
 function cleanDays(days) {
   const out = {};
-  for (const [key, state] of Object.entries(days)) {
-    if (STATES.includes(state)) out[key] = state;
+  for (const [key, state] of Object.entries(days || {})) {
+    if (STATES[state]) out[key] = state;
   }
   return out;
 }
 
-function loadData() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (parsed && typeof parsed.days === 'object') return { days: cleanDays(parsed.days) };
-  } catch (_) { /* almacenamiento no disponible */ }
-  return { days: {} };
-}
-
-function saveData() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (_) {
-    alert('No se han podido guardar los datos en este dispositivo.');
-  }
-}
-
-let data = loadData();
+let data = { days: cleanDays(load(STORAGE_KEY, {}).days) };
 let brush = 'tele';
 const now = new Date();
 let view = { year: now.getFullYear(), quarter: Math.floor(now.getMonth() / 3) };
+
+function persist() {
+  if (!save(STORAGE_KEY, data)) toast('No se han podido guardar los datos en este dispositivo.');
+}
 
 function effectiveState(key) {
   if (data.days[key]) return data.days[key];
@@ -102,7 +147,7 @@ function effectiveState(key) {
 // ---------- Cálculo ----------
 
 function quarterStats(year, quarter) {
-  const s = { working: 0, tele: 0, off: 0, holiday: 0 };
+  const s = { working: 0, tele: 0, off: 0, holiday: 0, other: 0 };
   const start = new Date(year, quarter * 3, 1);
   const end = new Date(year, quarter * 3 + 3, 1);
   for (const d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
@@ -111,10 +156,13 @@ function quarterStats(year, quarter) {
     if (state === 'holiday') { s.holiday++; continue; }
     if (state === 'off') { s.off++; continue; }
     s.working++;
-    if (state === 'tele') s.tele++;
+    if (state === 'tele') s.tele += 1;
+    else if (state === 'half') s.tele += 0.5;
+    else if (state === 'other') s.other++;
   }
   s.allowedExact = s.working * RATIO;
-  s.allowed = Math.floor(s.allowedExact + 1e-9);
+  // Con medios días, el máximo se redondea hacia abajo al medio día más cercano
+  s.allowed = Math.floor(s.allowedExact * 2 + 1e-9) / 2;
   s.remaining = s.allowed - s.tele;
   s.pct = s.working ? (s.tele / s.working) * 100 : 0;
   return s;
@@ -135,10 +183,10 @@ function render() {
 
 function renderSummary(s) {
   const over = s.remaining < 0;
-  $('remaining').textContent = over ? Math.abs(s.remaining) : s.remaining;
-  $('remaining-label').textContent = over
-    ? `día${Math.abs(s.remaining) === 1 ? '' : 's'} por encima del 40%`
-    : `día${s.remaining === 1 ? '' : 's'} de teletrabajo disponible${s.remaining === 1 ? '' : 's'}`;
+  const n = Math.abs(s.remaining);
+  const plural = n === 1 ? '' : 's';
+  $('remaining').textContent = fmt(n);
+  $('remaining-label').textContent = over ? `día${plural} por encima del 40%` : `día${plural} de teletrabajo`;
   document.querySelector('.summary').classList.toggle('over', over);
 
   const ratio = s.allowed ? Math.min(s.tele / s.allowed, 1) : (s.tele ? 1 : 0);
@@ -146,13 +194,14 @@ function renderSummary(s) {
   $('progress').setAttribute('aria-valuemax', String(s.allowed));
   $('progress').setAttribute('aria-valuenow', String(s.tele));
   $('progress-text').textContent =
-    `${s.tele} de ${s.allowed} días usados · 40% de ${s.working} laborables = ${s.allowedExact.toFixed(1).replace('.', ',')}`;
+    `${fmt(s.tele)} de ${fmt(s.allowed)} días usados · 40% de ${s.working} laborables = ${s.allowedExact.toFixed(1).replace('.', ',')}`;
 
   $('s-working').textContent = s.working;
-  $('s-allowed').textContent = s.allowed;
-  $('s-tele').textContent = s.tele;
+  $('s-allowed').textContent = fmt(s.allowed);
+  $('s-tele').textContent = fmt(s.tele);
   $('s-off').textContent = s.off;
   $('s-holiday').textContent = s.holiday;
+  $('s-other').textContent = s.other;
   $('s-pct').textContent = `${s.pct.toFixed(0)}%`;
 }
 
@@ -164,7 +213,7 @@ function renderMonths(year, quarter) {
 
   for (let m = quarter * 3; m < quarter * 3 + 3; m++) {
     const card = document.createElement('div');
-    card.className = 'month';
+    card.className = 'card month';
     const title = document.createElement('h2');
     title.textContent = `${MONTHS[m]} ${year}`;
     card.appendChild(title);
@@ -207,12 +256,12 @@ function renderMonths(year, quarter) {
         const state = effectiveState(key);
         if (state) {
           cell.classList.add(state);
-          const icon = document.createElement('span');
-          icon.className = 'icon';
-          icon.textContent = STATE_ICONS[state];
-          cell.appendChild(icon);
+          const ic = document.createElement('span');
+          ic.className = 'icon';
+          ic.textContent = STATES[state].icon;
+          cell.appendChild(ic);
         }
-        cell.setAttribute('aria-label', `${d} de ${MONTHS[m]}${state ? ': ' + stateName(state) : ''}${holidays[key] ? ' (' + holidays[key] + ')' : ''}`);
+        cell.setAttribute('aria-label', `${d} de ${MONTHS[m]}${state ? ': ' + STATES[state].name : ''}${holidays[key] ? ' (' + holidays[key] + ')' : ''}`);
       }
       grid.appendChild(cell);
     }
@@ -221,18 +270,11 @@ function renderMonths(year, quarter) {
   }
 }
 
-function stateName(state) {
-  return { tele: 'teletrabajo', off: 'día libre', holiday: 'festivo' }[state];
-}
-
 function renderHolidayList(year, quarter) {
   const ul = $('holiday-list');
   ul.innerHTML = '';
   const entries = Object.entries(nationalHolidays(year))
-    .filter(([key]) => {
-      const month = Number(key.slice(5, 7)) - 1;
-      return Math.floor(month / 3) === quarter;
-    })
+    .filter(([key]) => Math.floor((Number(key.slice(5, 7)) - 1) / 3) === quarter)
     .sort(([a], [b]) => a.localeCompare(b));
 
   if (!entries.length) {
@@ -241,26 +283,33 @@ function renderHolidayList(year, quarter) {
   }
   for (const [key, name] of entries) {
     const [y, mo, d] = key.split('-').map(Number);
-    const date = new Date(y, mo - 1, d);
+    const weekday = new Date(y, mo - 1, d).toLocaleDateString('es-ES', { weekday: 'long' });
     const li = document.createElement('li');
-    const weekday = date.toLocaleDateString('es-ES', { weekday: 'long' });
     li.innerHTML = `<strong>${d} de ${MONTHS[mo - 1]}</strong> · ${name} <span class="muted">(${weekday})</span>`;
     ul.appendChild(li);
   }
 }
 
-// ---------- Interacción ----------
+function toast(text) {
+  document.querySelector('.toast')?.remove();
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.setAttribute('role', 'status');
+  el.textContent = text;
+  document.body.append(el);
+  setTimeout(() => el.remove(), 2600);
+}
+
+// ---------- Calendario y tipos de día ----------
 
 $('months').addEventListener('click', (e) => {
   const cell = e.target.closest('button.day');
   if (!cell || cell.disabled) return;
   const key = cell.dataset.key;
-  if (brush === 'clear' || effectiveState(key) === brush) {
-    delete data.days[key];
-  } else {
-    data.days[key] = brush;
-  }
-  saveData();
+  // Tocar un día con el mismo tipo lo desmarca
+  if (effectiveState(key) === brush) delete data.days[key];
+  else data.days[key] = brush;
+  persist();
   render();
 });
 
@@ -272,6 +321,8 @@ $('brushes').addEventListener('click', (e) => {
 });
 document.querySelector(`.brush[data-brush="${brush}"]`).classList.add('active');
 
+// ---------- Trimestres (barra inferior) ----------
+
 function shiftQuarter(delta) {
   let q = view.quarter + delta;
   let y = view.year;
@@ -281,22 +332,64 @@ function shiftQuarter(delta) {
   render();
 }
 
-$('prev').addEventListener('click', () => shiftQuarter(-1));
-$('next').addEventListener('click', () => shiftQuarter(1));
-$('today-btn').addEventListener('click', () => {
+function goToday() {
   const t = new Date();
   view = { year: t.getFullYear(), quarter: Math.floor(t.getMonth() / 3) };
   render();
-});
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
-$('export-btn').addEventListener('click', () => {
+$('prev').addEventListener('click', () => shiftQuarter(-1));
+$('next').addEventListener('click', () => shiftQuarter(1));
+$('quarter-current').addEventListener('click', goToday);
+
+// ---------- Menú ⋯ ----------
+
+const MENU = [
+  { label: 'Opciones de visualización', icon: 'palette', run: () => openDisplaySheet() },
+  { label: 'Ir al trimestre actual', icon: 'today', run: () => goToday() },
+  { label: 'Exportar copia', icon: 'download', run: () => exportData() },
+  { label: 'Importar copia', icon: 'upload', run: () => $('import-input').click() },
+];
+
+function openMenu() {
+  const menu = $('menu');
+  menu.innerHTML = MENU.map((m, i) =>
+    `<button class="menu-item" role="menuitem" data-i="${i}">${icon(m.icon, 20)}<span>${m.label}</span></button>`).join('');
+  menu.querySelectorAll('.menu-item').forEach((b) => b.addEventListener('click', () => {
+    closeMenu();
+    MENU[b.dataset.i].run();
+  }));
+  const r = $('menu-btn').getBoundingClientRect();
+  menu.style.top = `${r.bottom + 6}px`;
+  menu.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
+  menu.hidden = false;
+  $('menu-btn').setAttribute('aria-expanded', 'true');
+}
+
+function closeMenu() {
+  $('menu').hidden = true;
+  $('menu-btn').setAttribute('aria-expanded', 'false');
+}
+
+$('menu-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if ($('menu').hidden) openMenu();
+  else closeMenu();
+});
+document.addEventListener('click', (e) => {
+  if (!$('menu').hidden && !e.target.closest('#menu')) closeMenu();
+});
+window.addEventListener('resize', closeMenu);
+
+function exportData() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `teletrabajo-${todayKey()}.json`;
+  a.download = `up-to-40-${todayKey()}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-});
+}
 
 $('import-input').addEventListener('change', async (e) => {
   const file = e.target.files[0];
@@ -306,8 +399,9 @@ $('import-input').addEventListener('change', async (e) => {
     if (!parsed || typeof parsed.days !== 'object') throw new Error('formato');
     if (!confirm('Esto sustituirá los datos actuales de este dispositivo. ¿Continuar?')) return;
     data = { days: cleanDays(parsed.days) };
-    saveData();
+    persist();
     render();
+    toast('Copia importada');
   } catch (_) {
     alert('El archivo no es una copia válida.');
   } finally {
@@ -315,49 +409,98 @@ $('import-input').addEventListener('change', async (e) => {
   }
 });
 
-// ---------- Tema (automático / claro / oscuro) ----------
+// ---------- Opciones de visualización (modo y fondo) ----------
 
-const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+const WALLS = {
+  glaciar: { name: 'Glaciar', c: ['96 165 250', '186 230 253', '56 189 248', '37 99 235'] },
+  cielo: { name: 'Cielo', c: ['14 165 233', '125 211 252', '34 211 238', '59 130 246'] },
+  marino: { name: 'Marino', c: ['30 64 175', '37 99 235', '8 145 178', '67 56 202'] },
+  lavanda: { name: 'Lavanda', c: ['99 102 241', '147 197 253', '167 139 250', '56 189 248'] },
+};
+const lightQuery = matchMedia('(prefers-color-scheme: light)');
+let display = { theme: 'auto', wall: 'glaciar', ...load(DISPLAY_KEY, {}) };
 
-function getThemePref() {
-  try {
-    const t = localStorage.getItem(THEME_KEY);
-    return t === 'light' || t === 'dark' ? t : 'auto';
-  } catch (_) {
-    return 'auto';
-  }
+function applyDisplay() {
+  const light = display.theme === 'light' || (display.theme === 'auto' && lightQuery.matches);
+  document.documentElement.dataset.theme = light ? 'light' : 'dark';
+  document.documentElement.dataset.wall = WALLS[display.wall] ? display.wall : 'glaciar';
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', light ? '#eef4fc' : '#07101f');
+}
+lightQuery.addEventListener('change', () => { if (display.theme === 'auto') applyDisplay(); });
+
+// Miniatura de un fondo con los mismos degradados que el real
+function wallPreview(key) {
+  const [c1, c2, c3, c4] = WALLS[key].c;
+  const light = document.documentElement.dataset.theme === 'light';
+  const a = light ? 0.4 : 0.5;
+  const base = light ? '#eef4fc' : '#07101f';
+  return `radial-gradient(70% 60% at 15% 10%, rgb(${c1} / ${a}), transparent 70%), radial-gradient(60% 55% at 90% 25%, rgb(${c2} / ${a * 0.8}), transparent 72%),
+    radial-gradient(70% 60% at 75% 95%, rgb(${c3} / ${a * 0.85}), transparent 70%), radial-gradient(60% 55% at 5% 85%, rgb(${c4} / ${a * 0.8}), transparent 72%), ${base}`;
 }
 
-function applyTheme(pref) {
-  if (pref === 'auto') delete document.documentElement.dataset.theme;
-  else document.documentElement.dataset.theme = pref;
-  const dark = pref === 'dark' || (pref === 'auto' && darkQuery.matches);
-  $('theme-color').setAttribute('content', dark ? '#0a1630' : '#00205b');
-  document.querySelectorAll('#theme-picker button').forEach((b) => {
-    const active = b.dataset.theme === pref;
-    b.classList.toggle('active', active);
-    b.setAttribute('aria-checked', String(active));
-  });
+function closeSheet() {
+  document.querySelector('.sheet-backdrop')?.remove();
 }
 
-$('theme-picker').addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-theme]');
-  if (!btn) return;
-  const pref = btn.dataset.theme;
-  try {
-    if (pref === 'auto') localStorage.removeItem(THEME_KEY);
-    else localStorage.setItem(THEME_KEY, pref);
-  } catch (_) { /* sin almacenamiento: se aplica solo en esta sesión */ }
-  applyTheme(pref);
+function openDisplaySheet() {
+  closeSheet();
+  const back = document.createElement('div');
+  back.className = 'sheet-backdrop';
+  document.body.append(back);
+  back.addEventListener('click', (e) => { if (e.target === back) closeSheet(); });
+
+  const draw = () => {
+    back.innerHTML = `
+      <div class="sheet" role="dialog" aria-modal="true" aria-label="Opciones de visualización">
+        <h2 class="sheet-title">Opciones de visualización</h2>
+        <p class="opt-label">Modo</p>
+        <div class="seg" role="group" aria-label="Modo">
+          ${[['dark', 'Oscuro'], ['light', 'Claro'], ['auto', 'Automático']].map(([v, l]) =>
+            `<button type="button" data-theme-opt="${v}" class="${display.theme === v ? 'on' : ''}" aria-pressed="${display.theme === v}">${l}</button>`).join('')}
+        </div>
+        <p class="muted small">${display.theme === 'auto' ? 'Sigue el modo claro u oscuro del sistema.' : '&nbsp;'}</p>
+        <p class="opt-label">Fondo</p>
+        <div class="walls">
+          ${Object.entries(WALLS).map(([k, w]) =>
+            `<button type="button" class="wall ${display.wall === k ? 'on' : ''}" data-wall-opt="${k}" style="background:${wallPreview(k)}" aria-pressed="${display.wall === k}">${w.name}</button>`).join('')}
+        </div>
+        <div class="body-actions"><button class="done-btn" type="button">Listo</button></div>
+      </div>`;
+    back.querySelectorAll('[data-theme-opt]').forEach((b) => b.addEventListener('click', () => {
+      display.theme = b.dataset.themeOpt;
+      save(DISPLAY_KEY, display);
+      applyDisplay();
+      draw();
+    }));
+    back.querySelectorAll('[data-wall-opt]').forEach((b) => b.addEventListener('click', () => {
+      display.wall = b.dataset.wallOpt;
+      save(DISPLAY_KEY, display);
+      applyDisplay();
+      draw();
+    }));
+    back.querySelector('.done-btn').addEventListener('click', closeSheet);
+  };
+  draw();
+}
+
+// ---------- Pantalla de inicio ----------
+
+$('enter-btn').addEventListener('click', () => {
+  const body = document.body;
+  if (body.classList.contains('entering')) return;
+  body.classList.add('entering');
+  setTimeout(() => {
+    $('splash').remove();
+    body.classList.remove('booting', 'entering');
+  }, 820);
 });
-darkQuery.addEventListener('change', () => applyTheme(getThemePref()));
-applyTheme(getThemePref());
 
 // ---------- Sin zoom (Safari en iOS ignora user-scalable=no) ----------
 
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
 
+applyDisplay();
 render();
 
 if ('serviceWorker' in navigator) {
