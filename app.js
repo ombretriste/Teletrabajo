@@ -321,7 +321,7 @@ $('months').addEventListener('click', (e) => {
 });
 
 $('brushes').innerHTML = Object.entries(STATES).map(([key, s]) =>
-  `<button class="brush ${key}" type="button" data-brush="${key}"><span class="brush-icon">${icon(key, 22)}</span><span class="brush-label">${s.label}</span></button>`).join('');
+  `<button class="brush ${key}" type="button" data-brush="${key}"><span class="brush-icon">${icon(key, 18)}</span><span class="brush-label">${s.label}</span></button>`).join('');
 
 $('brushes').addEventListener('click', (e) => {
   const btn = e.target.closest('button.brush');
