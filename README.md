@@ -13,9 +13,9 @@ App web instalable (PWA) para llevar el control de los días de teletrabajo por 
 - Tipos de día (se desmarcan volviendo a tocar el día):
   - **Teletrabajo**: suma 1.
   - **Medio día teletrabajo**: suma 0,5.
-  - **Libre**, **Vacaciones** y **Otros** (baja, médico…): cuentan como laborables sin teletrabajo, igual que ir a la oficina.
-  - **Festivo**: no cuenta como laborable.
-- **Días laborables** = días entre semana − festivos.
+  - **Libre**, **Vacaciones** y **Festivo**: no cuentan como laborables.
+  - **Otros** (baja, médico…): cuenta como laborable, pero no como teletrabajo.
+- **Días laborables** = días entre semana − festivos − días libres − vacaciones.
 - **Días permitidos** = 40% de los laborables, redondeado hacia abajo al medio día.
 - **Disponibles** = permitidos − teletrabajo marcado.
 

@@ -7,7 +7,7 @@ const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 
 const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
 // tele: suma 1 al teletrabajo · half: suma 0,5 · other (baja, médico…): laborable sin teletrabajo
-// off y vacation cuentan como laborables sin teletrabajo (como ir a la oficina); holiday no es laborable
+// off, vacation y holiday no cuentan como laborables (reducen los días permitidos)
 const STATES = {
   tele: { label: 'Teletrabajo', name: 'teletrabajo' },
   half: { label: 'Medio día teletrabajo', name: 'medio día de teletrabajo' },
@@ -16,7 +16,7 @@ const STATES = {
   holiday: { label: 'Festivo', name: 'festivo' },
   other: { label: 'Otros', name: 'otros (baja, médico…)' },
 };
-const NON_WORKING = ['holiday'];
+const NON_WORKING = ['off', 'vacation', 'holiday'];
 
 const ICONS = {
   // Tipos de día
@@ -165,7 +165,6 @@ function quarterStats(year, quarter) {
     const state = effectiveState(dateKey(d.getFullYear(), d.getMonth(), d.getDate()));
     if (NON_WORKING.includes(state)) { s[state]++; continue; }
     s.working++;
-    if (state === 'off' || state === 'vacation') s[state]++;
     if (state === 'tele') s.tele += 1;
     else if (state === 'half') s.tele += 0.5;
     else if (state === 'other') s.other++;
