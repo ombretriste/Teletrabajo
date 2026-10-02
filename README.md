@@ -38,6 +38,8 @@ Al importar se aceptan también espacios, `;` o `,` como separador, y el tipo si
 
 ## Instalar en el móvil
 
+En móvil y tablet, al entrar aparece un aviso con estos pasos (adaptados a iPhone/iPad o Android). Sale cada vez hasta que se marca «No mostrar más», y no aparece en escritorio ni cuando la app ya se abre desde el icono de la pantalla de inicio.
+
 - **iPhone (Safari):** Compartir → «Añadir a pantalla de inicio».
 - **Android (Chrome):** menú ⋮ → «Instalar aplicación».
 

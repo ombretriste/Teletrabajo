@@ -555,8 +555,67 @@ $('enter-btn').addEventListener('click', () => {
   setTimeout(() => {
     $('splash').remove();
     body.classList.remove('booting', 'entering');
+    maybeShowInstallHint();
   }, 820);
 });
+
+// ---------- Aviso: añadir a la pantalla de inicio (solo móvil y tablet) ----------
+
+const INSTALL_HINT_KEY = 'teletrabajo:installHint';
+const ua = navigator.userAgent;
+// El iPad con iPadOS se identifica como Mac, pero tiene pantalla táctil
+const isIOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+const isAndroid = /Android/.test(ua);
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+const HINT_ICONS = {
+  share: '<path d="M12 3.5v11M8 7.5l4-4 4 4"/><path d="M7 10.5H6a1.5 1.5 0 0 0-1.5 1.5v7A1.5 1.5 0 0 0 6 20.5h12a1.5 1.5 0 0 0 1.5-1.5v-7a1.5 1.5 0 0 0-1.5-1.5h-1"/>',
+  more: '<circle cx="12" cy="5.5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="18.5" r="1.5" fill="currentColor"/>',
+  add: '<rect x="4" y="4" width="16" height="16" rx="3.5"/><path d="M12 8.5v7M8.5 12h7"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+};
+const hintIcon = (name) =>
+  `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${HINT_ICONS[name]}</svg>`;
+
+function maybeShowInstallHint() {
+  // Escritorio, app ya abierta desde la pantalla de inicio o «No mostrar más» marcado: no se muestra
+  if (!(isIOS || isAndroid) || isStandalone()) return;
+  if (load(INSTALL_HINT_KEY, null) === 'off') return;
+
+  const steps = isIOS
+    ? [
+        ['share', 'Pulsa el botón <b>Compartir</b> de Safari (abajo en el iPhone, arriba en el iPad).'],
+        ['add', 'Desliza hacia abajo y elige <b>Añadir a pantalla de inicio</b>.'],
+        ['check', 'Pulsa <b>Añadir</b>. El icono de Up to 40% aparecerá junto a tus apps.'],
+      ]
+    : [
+        ['more', 'Pulsa el menú <b>⋮</b> de Chrome, arriba a la derecha.'],
+        ['add', 'Elige <b>Añadir a pantalla de inicio</b> o <b>Instalar aplicación</b>.'],
+        ['check', 'Confirma con <b>Instalar</b>. El icono de Up to 40% aparecerá junto a tus apps.'],
+      ];
+
+  closeSheet();
+  const back = document.createElement('div');
+  back.className = 'sheet-backdrop center';
+  back.innerHTML = `
+    <div class="sheet install-sheet" role="dialog" aria-modal="true" aria-labelledby="install-title">
+      <span class="install-logo">${logoSVG(56)}</span>
+      <h2 class="sheet-title" id="install-title">Añade Up to 40% a tu pantalla de inicio</h2>
+      <p class="muted small">Así la abrirás como una app más, a pantalla completa y con un solo toque.</p>
+      <ol class="install-steps">
+        ${steps.map(([ic, text]) => `<li><span class="step-icon">${hintIcon(ic)}</span><span>${text}</span></li>`).join('')}
+      </ol>
+      <div class="install-footer">
+        <label class="no-more"><input type="checkbox" id="install-no-more" /> No mostrar más</label>
+        <button class="done-btn" type="button" id="install-ok">Aceptar</button>
+      </div>
+    </div>`;
+  document.body.append(back);
+  back.querySelector('#install-ok').addEventListener('click', () => {
+    if (back.querySelector('#install-no-more').checked) save(INSTALL_HINT_KEY, 'off');
+    closeSheet();
+  });
+}
 
 // ---------- Siempre en vertical ----------
 // Android (app instalada) respeta la orientación del manifiesto y este bloqueo;

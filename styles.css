@@ -591,3 +591,75 @@ main {
   .rotate-hint p { margin: 0; font-size: 16px; font-weight: 300; letter-spacing: .02em; }
   body { overflow: hidden; }
 }
+
+/* ---------- Aviso emergente: añadir a la pantalla de inicio ---------- */
+.sheet-backdrop.center {
+  align-items: center;
+  padding: 16px;
+  background: rgba(0, 4, 16, .35);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  backdrop-filter: blur(14px) saturate(120%);
+}
+:root[data-theme="light"] .sheet-backdrop.center { background: rgba(225, 235, 250, .4); }
+.install-sheet {
+  max-width: 400px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  border-radius: 22px;
+  border-bottom: 1px solid var(--line);
+  padding: 22px 18px 16px;
+  align-items: center;
+  text-align: center;
+  animation: pop-in .22s ease;
+}
+.install-logo { display: inline-flex; }
+.install-sheet .sheet-title { font-size: 21px; line-height: 1.25; }
+.install-steps {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  text-align: left;
+}
+.install-steps li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 300;
+  line-height: 1.35;
+}
+.install-steps b { font-weight: 600; }
+.step-icon {
+  flex: 0 0 36px;
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--accent);
+}
+.install-footer {
+  width: 100%;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.no-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.no-more input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
