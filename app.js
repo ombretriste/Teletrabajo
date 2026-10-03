@@ -1,5 +1,7 @@
 'use strict';
 
+// Versión de la app (se ve en la pantalla de inicio). Arreglos y ajustes: 1.0.x; novedades: 1.x.0.
+const APP_VERSION = '1.0.0';
 const STORAGE_KEY = 'teletrabajo:v1';
 const DISPLAY_KEY = 'teletrabajo:display';
 const RATIO = 0.4;
@@ -56,6 +58,7 @@ function logoSVG(size) {
     </svg>`;
 }
 document.querySelectorAll('[data-logo]').forEach((el) => { el.innerHTML = logoSVG(Number(el.dataset.logo)); });
+document.getElementById('app-version').textContent = `Versión ${APP_VERSION}`;
 
 // ---------- Fechas ----------
 

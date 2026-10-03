@@ -2,6 +2,8 @@
 
 *by OmT Finance*
 
+Versión **1.0.0** (se muestra en la pantalla de inicio). Las correcciones y ajustes suben el último número (1.0.1); las novedades, el del medio (1.1.0).
+
 App web instalable (PWA) para llevar el control de los días de teletrabajo por trimestre, con un límite del 40% de los días laborables.
 
 ## Funcionamiento
