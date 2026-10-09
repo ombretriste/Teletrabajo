@@ -21,10 +21,17 @@ const STATES = {
   vacprev: { label: 'Vacaciones año anterior', name: 'vacaciones del año anterior' },
   hours: { label: 'Días con horas', name: 'día con horas' },
   holiday: { label: 'Festivo', name: 'festivo' },
-  other: { label: 'Otros', name: 'otros (baja, médico…)' },
+  // Grupo del botón «Otros» (se elige en un menú emergente)
+  nonexp: { label: 'Días que no caducan', name: 'día que no caduca', group: 'other' },
+  medical: { label: 'Médico', name: 'médico', group: 'other' },
+  sick: { label: 'Bajas', name: 'baja', group: 'other' },
+  other: { label: 'Otros', name: 'otros', group: 'other' },
   mix: { label: 'Medio día teletrabajo y medio día libre', name: 'medio día de teletrabajo y medio día libre', combo: true },
 };
-const NON_WORKING = ['off', 'vacation', 'vacprev', 'hours', 'holiday'];
+const NON_WORKING = ['off', 'vacation', 'vacprev', 'hours', 'nonexp', 'holiday'];
+// Médico, Bajas y Otros: cuentan como laborables, sin teletrabajo
+const WORKING_OTHER = ['medical', 'sick', 'other'];
+const OTHER_GROUP = Object.keys(STATES).filter((k) => STATES[k].group === 'other');
 
 const ICONS = {
   // Tipos de día
@@ -36,6 +43,10 @@ const ICONS = {
   vacation: '<circle cx="12" cy="12" r="3.8"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
   vacprev: '<path d="M3.5 18h17"/><path d="M7 18a5 5 0 0 1 10 0"/><path d="M12 7.5v2.5M5.8 10.3l1.6 1.6M18.2 10.3l-1.6 1.6M3.5 14.5h2.2M18.3 14.5h2.2"/><path d="M9.5 21h5"/>',
   hours: '<circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/>',
+  nonexp: '<path d="M8.2 8.5a3.5 3.5 0 1 0 0 7c2.2 0 3.4-1.8 3.8-3.5.4-1.7 1.6-3.5 3.8-3.5a3.5 3.5 0 1 1 0 7c-2.2 0-3.4-1.8-3.8-3.5-.4-1.7-1.6-3.5-3.8-3.5z"/>',
+  medical: '<path d="M6.5 3.5v4.5a3.5 3.5 0 0 0 7 0V3.5"/><path d="M10 11.5v2.5a4 4 0 0 0 8 0v-1.5"/><circle cx="18" cy="10.5" r="2"/><path d="M5.5 3.5h2M12.5 3.5h2"/>',
+  sick: '<path d="M10 4.5a2 2 0 0 1 4 0v9a4 4 0 1 1-4 0z"/><path d="M12 9v6.5"/><circle cx="12" cy="17" r="1.2" fill="currentColor"/>',
+  chevron: '<path d="M7 10l5 5 5-5"/>',
   holiday: '<path d="M5.5 21V3.5"/><path d="M5.5 4.5h12l-2.5 4 2.5 4h-12"/>',
   other: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/>',
   // Menú
@@ -166,7 +177,9 @@ function cleanAllowances(a) {
   return { vacation: num(a?.vacation, ALLOW_DEFAULTS.vacation), off: num(a?.off, ALLOW_DEFAULTS.off), years };
 }
 const stored = load(STORAGE_KEY, {});
-let data = { days: cleanDays(stored.days), allowances: cleanAllowances(stored.allowances) };
+// nonexp: días que no caducan ganados (se suman con el + del menú; se gastan al marcarlos)
+const cleanNonexp = (n) => (Number.isFinite(Number(n)) && Number(n) > 0 ? Number(n) : 0);
+let data = { days: cleanDays(stored.days), allowances: cleanAllowances(stored.allowances), nonexp: cleanNonexp(stored.nonexp) };
 const allowance = (year, kind) => data.allowances.years[year]?.[kind] ?? data.allowances[kind];
 let brush = 'tele';
 const now = new Date();
@@ -185,7 +198,7 @@ function effectiveState(key) {
 // ---------- Cálculo ----------
 
 function quarterStats(year, quarter) {
-  const s = { working: 0, tele: 0, off: 0, vacation: 0, vacprev: 0, hours: 0, holiday: 0, other: 0 };
+  const s = { working: 0, tele: 0, off: 0, vacation: 0, vacprev: 0, hours: 0, nonexp: 0, holiday: 0, other: 0 };
   const start = new Date(year, quarter * 3, 1);
   const end = new Date(year, quarter * 3 + 3, 1);
   for (const d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
@@ -201,7 +214,7 @@ function quarterStats(year, quarter) {
     s.working++;
     if (state === 'tele') s.tele += 1;
     else if (state === 'half') s.tele += 0.5;
-    else if (state === 'other') s.other++;
+    else if (WORKING_OTHER.includes(state)) s.other++;
   }
   s.allowedExact = s.working * RATIO;
   s.working = Math.round(s.working * 2) / 2;
@@ -252,6 +265,7 @@ function renderSummary(s) {
 // · Libre disposición: allowance − libres (los medios días cuentan la mitad); caducan el 31 de diciembre.
 function balances(year) {
   const used = { vacation: {}, vacprev: {}, off: {} };
+  let nonexpUsed = 0;
   const add = (k, y, n) => { used[k][y] = (used[k][y] || 0) + n; };
   for (const [key, st] of Object.entries(data.days)) {
     const y = key.slice(0, 4);
@@ -259,6 +273,7 @@ function balances(year) {
     else if (st === 'vacprev') add('vacprev', y, 1);
     else if (st === 'off') add('off', y, 1);
     else if (st === 'halfoff' || st === 'mix') add('off', y, 0.5);
+    else if (st === 'nonexp') nonexpUsed++;
   }
   const vacLeft = (y) => allowance(y, 'vacation') - (used.vacation[y] || 0) - (used.vacprev[String(Number(y) + 1)] || 0);
   const y = String(year);
@@ -266,6 +281,8 @@ function balances(year) {
     vacation: vacLeft(y),
     prev: vacLeft(String(year - 1)),
     off: allowance(y, 'off') - (used.off[y] || 0),
+    nonexp: data.nonexp - nonexpUsed, // no caducan: cuentan todos los años
+    nonexpUsed,
   };
 }
 
@@ -279,6 +296,8 @@ function renderPending(year, quarter) {
   };
   put('p-vac', b.vacation);
   put('p-off', b.off);
+  put('p-nonexp', b.nonexp);
+  $('p-nonexp').title = `${fmt(data.nonexp)} ganados · ${fmt(b.nonexpUsed)} usados`;
   // Las del año anterior caducan el 30 de junio: en el 2.º semestre ya no se pueden usar
   if (quarter >= 2) put('p-prev', 0, b.prev > 0 ? 'Caducadas' : '0');
   else put('p-prev', b.prev);
@@ -395,16 +414,53 @@ $('months').addEventListener('click', (e) => {
   render();
 });
 
-$('brushes').innerHTML = Object.entries(STATES).filter(([, s]) => !s.combo).map(([key, s]) =>
-  `<button class="brush ${key}" type="button" data-brush="${key}"><span class="brush-icon">${icon(key, 18)}</span><span class="brush-label">${s.label}</span></button>`).join('');
+let groupChoice = 'other'; // opción elegida en el botón «Otros»
+const brushInner = (key) => `<span class="brush-icon">${icon(key, 18)}</span><span class="brush-label">${STATES[key].label}</span>`;
+$('brushes').innerHTML = Object.entries(STATES).filter(([k, s]) => !s.combo && (!s.group || k === 'other')).map(([key]) => key === 'other'
+  ? `<button class="brush group-btn other" type="button" data-group="other" aria-haspopup="menu">${brushInner('other')}<span class="brush-more">${icon('chevron', 14)}</span></button>`
+  : `<button class="brush ${key}" type="button" data-brush="${key}">${brushInner(key)}</button>`).join('');
+
+function setBrush(key) {
+  brush = key;
+  const groupBtn = document.querySelector('.group-btn');
+  if (STATES[key].group) {
+    groupChoice = key;
+    groupBtn.className = `brush group-btn ${key}`;
+    groupBtn.innerHTML = `${brushInner(key)}<span class="brush-more">${icon('chevron', 14)}</span>`;
+  }
+  document.querySelectorAll('.brush').forEach((b) => b.classList.toggle('active', b.dataset.brush === key || (b === groupBtn && STATES[key].group)));
+}
+
+function openGroupMenu(btn) {
+  closeGroupMenu();
+  const pop = document.createElement('div');
+  pop.className = 'menu group-menu';
+  pop.setAttribute('role', 'menu');
+  pop.innerHTML = OTHER_GROUP.map((k) => `
+    <button class="menu-item ${k} ${brush === k ? 'on' : ''}" role="menuitem" data-k="${k}">${icon(k, 20)}<span>${STATES[k].label}</span></button>`).join('');
+  document.body.append(pop);
+  const r = btn.getBoundingClientRect();
+  pop.style.top = `${r.bottom + 6}px`;
+  pop.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
+  pop.querySelectorAll('[data-k]').forEach((b) => b.addEventListener('click', () => {
+    setBrush(b.dataset.k);
+    closeGroupMenu();
+  }));
+}
+const closeGroupMenu = () => document.querySelector('.group-menu')?.remove();
 
 $('brushes').addEventListener('click', (e) => {
   const btn = e.target.closest('button.brush');
   if (!btn) return;
-  brush = btn.dataset.brush;
-  document.querySelectorAll('.brush').forEach((b) => b.classList.toggle('active', b === btn));
+  if (btn.dataset.group) {
+    e.stopPropagation();
+    return document.querySelector('.group-menu') ? closeGroupMenu() : openGroupMenu(btn);
+  }
+  setBrush(btn.dataset.brush);
 });
-document.querySelector(`.brush[data-brush="${brush}"]`).classList.add('active');
+document.addEventListener('click', (e) => { if (!e.target.closest('.group-menu')) closeGroupMenu(); });
+window.addEventListener('scroll', closeGroupMenu, { passive: true });
+setBrush(brush);
 
 // ---------- Trimestres (barra inferior) ----------
 
@@ -433,6 +489,7 @@ $('quarter-current').addEventListener('click', goToday);
 const MENU = [
   { label: 'Ir al trimestre actual', icon: 'today', run: () => goToday() },
   { label: 'Días de vacaciones y libre', icon: 'allow', run: () => openAllowanceSheet() },
+  { label: 'Días que no caducan', icon: 'nonexp', run: () => openNonexpSheet() },
   { label: 'Opciones de visualización', icon: 'palette', run: () => openDisplaySheet() },
   { label: 'Exportar calendario', icon: 'download', run: () => exportCalendar() },
   { label: 'Importar calendario', icon: 'upload', run: () => $('import-input').click() },
@@ -483,6 +540,8 @@ function calendarText() {
     '# Días de vacaciones y libre disposición al año (por defecto y años concretos)',
     `DIAS\tdefecto\tvacaciones=${data.allowances.vacation}\tlibre=${data.allowances.off}`,
     ...Object.entries(data.allowances.years).sort().map(([y, v]) => `DIAS\t${y}\tvacaciones=${v.vacation}\tlibre=${v.off}`),
+    '# Días que no caducan ganados',
+    `NOCADUCAN\t${data.nonexp}`,
   ];
   let section = '';
   for (const key of keys) {
@@ -526,13 +585,16 @@ function parseCalendar(text) {
   // Copias antiguas en JSON
   if (text.trim().startsWith('{')) {
     const obj = JSON.parse(text);
-    return { days: cleanDays(obj.days), allowances: obj.allowances ? cleanAllowances(obj.allowances) : null };
+    return { days: cleanDays(obj.days), allowances: obj.allowances ? cleanAllowances(obj.allowances) : null, nonexp: obj.nonexp != null ? cleanNonexp(obj.nonexp) : null };
   }
   const days = {};
   let allowances = null;
+  let nonexp = null;
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     if (!line || line.startsWith('#')) continue;
+    const n = line.match(/^NOCADUCAN\s+([\d.,]+)/i);
+    if (n) { nonexp = cleanNonexp(n[1].replace(',', '.')); continue; }
     const a = line.match(/^DIAS\s+(defecto|\d{4})\s+vacaciones=([\d.,]+)\s+libre=([\d.,]+)/i);
     if (a) {
       allowances ??= { years: {} };
@@ -545,18 +607,18 @@ function parseCalendar(text) {
     const state = m && STATE_BY_NAME[normalize(m[2])];
     if (state) days[m[1]] = state;
   }
-  return { days, allowances: allowances ? cleanAllowances(allowances) : null };
+  return { days, allowances: allowances ? cleanAllowances(allowances) : null, nonexp };
 }
 
 $('import-input').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
   try {
-    const { days, allowances } = parseCalendar(await file.text());
+    const { days, allowances, nonexp } = parseCalendar(await file.text());
     const count = Object.keys(days).length;
     if (!count) throw new Error('vacío');
     if (!confirm(`Se importarán ${count} días y se sustituirá el calendario actual de este dispositivo. ¿Continuar?`)) return;
-    data = { days, allowances: allowances ?? data.allowances };
+    data = { days, allowances: allowances ?? data.allowances, nonexp: nonexp ?? data.nonexp };
     persist();
     render();
     toast(`Calendario importado (${count} días)`);
@@ -701,6 +763,39 @@ function openAllowanceSheet() {
   draw();
 }
 
+// ---------- Días que no caducan (menú ⋯) ----------
+// Se ganan de forma puntual: aquí se suman con +; se gastan al marcarlos en el calendario.
+function openNonexpSheet() {
+  closeSheet();
+  const back = document.createElement('div');
+  back.className = 'sheet-backdrop';
+  document.body.append(back);
+  back.addEventListener('click', (e) => { if (e.target === back) closeSheet(); });
+  const draw = () => {
+    const b = balances(view.year);
+    back.innerHTML = `
+      <div class="sheet nx-sheet" role="dialog" aria-modal="true" aria-label="Días que no caducan">
+        <h2 class="sheet-title">Días que no caducan</h2>
+        <p class="muted small">Súmalos cada vez que te den uno. Se gastan al marcarlos en el calendario con «Otros» → «Días que no caducan», y no caducan nunca.</p>
+        <div class="nx-counter">
+          <button class="nx-btn nx-minus" type="button" aria-label="Quitar uno" ${data.nonexp <= 0 ? 'disabled' : ''}>−</button>
+          <div class="nx-value"><span class="nx-num">${fmt(data.nonexp)}</span><span class="nx-cap">días ganados</span></div>
+          <button class="nx-btn nx-plus" type="button" aria-label="Añadir uno">+</button>
+        </div>
+        <dl class="nx-stats">
+          <div><dt>Usados</dt><dd>${fmt(b.nonexpUsed)}</dd></div>
+          <div><dt>Disponibles</dt><dd class="${b.nonexp < 0 ? 'neg' : ''}">${fmt(b.nonexp)}</dd></div>
+        </dl>
+        <div class="body-actions"><button class="done-btn" type="button">Listo</button></div>
+      </div>`;
+    const change = (d) => { data.nonexp = Math.max(0, data.nonexp + d); persist(); render(); draw(); };
+    back.querySelector('.nx-plus').addEventListener('click', () => change(1));
+    back.querySelector('.nx-minus').addEventListener('click', () => change(-1));
+    back.querySelector('.done-btn').addEventListener('click', closeSheet);
+  };
+  draw();
+}
+
 // ---------- Aviso de novedades (al abrir la app tras una actualización) ----------
 // Sale en cada apertura hasta que se marca «No volver a mostrar»; la siguiente versión vuelve a avisar.
 const SEEN_KEY = 'teletrabajo:seenVersion';
@@ -709,8 +804,10 @@ const CHANGELOG = {
     ['halfoff', 'Medio día libre', 'Consume medio día de libre disposición y medio laborable. Se puede combinar con medio día de teletrabajo en el mismo día.'],
     ['vacprev', 'Vacaciones año anterior', 'Para gastar, hasta el 30 de junio, las vacaciones que te quedaron del año pasado.'],
     ['hours', 'Días con horas', 'No cuentan como laborables, igual que las vacaciones.'],
-    ['off', '«Libre» pasa a «Libre disposición»', 'Los nueve tipos de día, ordenados por concepto.'],
-    ['counter', 'Días pendientes', 'El resumen muestra los días que te quedan de vacaciones, del año anterior y de libre disposición.'],
+    ['nonexp', 'Días que no caducan', 'Los días que ganas se suman con el + del menú ⋯ y se gastan al marcarlos. No cuentan como laborables y nunca caducan.'],
+    ['other', 'Botón «Otros» ampliado', 'Al pulsarlo eliges entre Días que no caducan, Médico, Bajas u Otros. Médico, Bajas y Otros cuentan como laborables.'],
+    ['off', '«Libre» pasa a «Libre disposición»', 'Los tipos de día, ordenados por concepto.'],
+    ['counter', 'Días pendientes', 'El resumen muestra los días que te quedan de vacaciones, del año anterior, de libre disposición y los que no caducan.'],
     ['allow', 'Días por año', 'En el menú ⋯ puedes cambiar los días de vacaciones (21) y de libre disposición (4), también para años concretos.'],
   ],
 };

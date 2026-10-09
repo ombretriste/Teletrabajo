@@ -30,6 +30,8 @@
   --vacprev-bg: rgba(232, 121, 249, 0.2);
   --hours: #67e8f9;
   --hours-bg: rgba(34, 211, 238, 0.2);
+  --nonexp: #bef264;
+  --nonexp-bg: rgba(163, 230, 53, 0.18);
   --weekend: rgba(255, 255, 255, 0.025);
   /* Fondo: intensidad de las manchas y de las ondas */
   --wall-a: 0.30;
@@ -66,6 +68,8 @@
   --vacprev-bg: rgba(217, 70, 239, 0.13);
   --hours: #0e7490;
   --hours-bg: rgba(6, 182, 212, 0.15);
+  --nonexp: #4d7c0f;
+  --nonexp-bg: rgba(101, 163, 13, 0.15);
   --weekend: rgba(20, 60, 140, 0.03);
   --wall-a: 0.34;
   --ripple: 20 50 120;
@@ -709,7 +713,7 @@ main {
   color: var(--muted);
   text-align: center;
 }
-.mini-stats.pending { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 6px; padding-top: 0; border-top: 0; }
+.mini-stats.pending { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 6px; padding-top: 0; border-top: 0; }
 .mini-stats.pending dd { font-size: 17px; font-weight: 300; }
 .mini-stats.pending dd.neg { color: var(--danger); }
 
@@ -824,3 +828,43 @@ main {
 @keyframes wn-glow { 50% { box-shadow: 0 0 0 10px rgba(255, 255, 255, .08); transform: scale(1.06); } }
 @keyframes fade-out { to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .whatsnew, .wn-spark { animation: none; } }
+
+/* ---------- Grupo «Otros»: días que no caducan, médico y bajas ---------- */
+.brush.nonexp { --c: var(--nonexp); }
+.brush.medical, .brush.sick { --c: var(--other); }
+.day.nonexp { background: var(--nonexp-bg); border-color: color-mix(in srgb, var(--nonexp) 60%, transparent); }
+.day.medical, .day.sick { background: var(--other-bg); border-color: color-mix(in srgb, var(--other) 60%, transparent); }
+.day.nonexp .icon { color: var(--nonexp); }
+.day.medical .icon, .day.sick .icon { color: var(--other); }
+.group-btn { position: relative; }
+.brush-more { position: absolute; top: 3px; right: 4px; display: grid; color: var(--muted); opacity: .8; }
+.group-menu { z-index: 60; min-width: 220px; }
+.group-menu .menu-item.nonexp svg { color: var(--nonexp); }
+.group-menu .menu-item.medical svg, .group-menu .menu-item.sick svg, .group-menu .menu-item.other svg { color: var(--other); }
+.group-menu .menu-item.on { background: var(--surface-2); font-weight: 600; }
+.wn-list .nonexp .wn-icon { --c: var(--nonexp); }
+.wn-list .other .wn-icon { --c: var(--other); }
+
+/* Ventana de días que no caducan */
+.nx-counter { display: flex; align-items: center; justify-content: center; gap: 22px; margin: 6px 0; }
+.nx-btn {
+  width: 56px; height: 56px;
+  display: grid; place-items: center;
+  border: 1px solid color-mix(in srgb, var(--nonexp) 55%, transparent);
+  border-radius: 50%;
+  background: var(--nonexp-bg);
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 300;
+  line-height: 1;
+}
+.nx-btn:active:not(:disabled) { transform: scale(.94); }
+.nx-btn:disabled { opacity: .35; }
+.nx-value { display: flex; flex-direction: column; align-items: center; min-width: 96px; }
+.nx-num { font-size: 48px; font-weight: 200; line-height: 1; }
+.nx-cap { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+.nx-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0 0; }
+.nx-stats div { padding: 10px; border: 1px solid var(--line); border-radius: 12px; text-align: center; }
+.nx-stats dt { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.nx-stats dd { margin: 4px 0 0; font-size: 22px; font-weight: 300; }
+.nx-stats dd.neg { color: var(--danger); }

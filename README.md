@@ -17,9 +17,10 @@ App web instalable (PWA) para llevar el control de los días de teletrabajo por 
   - **Medio día teletrabajo**: suma 0,5.
   - **Libre disposición**, **Vacaciones**, **Vacaciones año anterior**, **Días con horas** y **Festivo**: no cuentan como laborables.
   - **Medio día libre**: cuenta medio laborable y consume medio día de libre disposición; se puede combinar con medio día de teletrabajo.
+  - **Otros** abre un menú con **Días que no caducan** (no cuentan como laborables; se suman con el + del menú ⋯ → Días que no caducan y se gastan al marcarlos), **Médico**, **Bajas** y **Otros** (estos tres cuentan como laborables sin teletrabajo).
   - **Otros** (baja, médico…): cuenta como laborable, pero no como teletrabajo.
 - **Días laborables** = días entre semana − festivos − libre disposición − vacaciones (también del año anterior) − días con horas (los medios días libres, la mitad).
-- **Días pendientes**: vacaciones del año (21 por defecto), vacaciones del año anterior (hasta el 30 de junio) y libre disposición (4 por defecto, caducan el 31 de diciembre). Los días de cada año se cambian en el menú ⋯ → Días de vacaciones y libre.
+- **Días pendientes**: vacaciones del año (21 por defecto), vacaciones del año anterior (hasta el 30 de junio) libre disposición (4 por defecto, caducan el 31 de diciembre) y días que no caducan. Los días de cada año se cambian en el menú ⋯ → Días de vacaciones y libre.
 - **Novedades**: tras una actualización, al entrar aparece un aviso con los cambios (con «No volver a mostrar»).
 - **Días permitidos** = 40% de los laborables, redondeado hacia abajo al medio día.
 - **Disponibles** = permitidos − teletrabajo marcado.
