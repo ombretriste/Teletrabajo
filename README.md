@@ -2,7 +2,7 @@
 
 *by OmT Finance*
 
-Versión **1.0.0** (se muestra en la pantalla de inicio). Las correcciones y ajustes suben el último número (1.0.1); las novedades, el del medio (1.1.0).
+Versión **1.1.0** (se muestra en la pantalla de inicio). Las correcciones y ajustes suben el último número (1.0.1); las novedades, el del medio (1.1.0).
 
 App web instalable (PWA) para llevar el control de los días de teletrabajo por trimestre, con un límite del 40% de los días laborables.
 
@@ -15,9 +15,12 @@ App web instalable (PWA) para llevar el control de los días de teletrabajo por 
 - Tipos de día (se desmarcan volviendo a tocar el día):
   - **Teletrabajo**: suma 1.
   - **Medio día teletrabajo**: suma 0,5.
-  - **Libre**, **Vacaciones** y **Festivo**: no cuentan como laborables.
+  - **Libre disposición**, **Vacaciones**, **Vacaciones año anterior**, **Días con horas** y **Festivo**: no cuentan como laborables.
+  - **Medio día libre**: cuenta medio laborable y consume medio día de libre disposición; se puede combinar con medio día de teletrabajo.
   - **Otros** (baja, médico…): cuenta como laborable, pero no como teletrabajo.
-- **Días laborables** = días entre semana − festivos − días libres − vacaciones.
+- **Días laborables** = días entre semana − festivos − libre disposición − vacaciones (también del año anterior) − días con horas (los medios días libres, la mitad).
+- **Días pendientes**: vacaciones del año (21 por defecto), vacaciones del año anterior (hasta el 30 de junio) y libre disposición (4 por defecto, caducan el 31 de diciembre). Los días de cada año se cambian en el menú ⋯ → Días de vacaciones y libre.
+- **Novedades**: tras una actualización, al entrar aparece un aviso con los cambios (con «No volver a mostrar»).
 - **Días permitidos** = 40% de los laborables, redondeado hacia abajo al medio día.
 - **Disponibles** = permitidos − teletrabajo marcado.
 

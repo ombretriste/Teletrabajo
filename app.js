@@ -1,7 +1,7 @@
 'use strict';
 
 // Versión de la app (se ve en la pantalla de inicio). Arreglos y ajustes: 1.0.x; novedades: 1.x.0.
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 const STORAGE_KEY = 'teletrabajo:v1';
 const DISPLAY_KEY = 'teletrabajo:display';
 const RATIO = 0.4;
@@ -9,23 +9,33 @@ const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 
 const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
 // tele: suma 1 al teletrabajo · half: suma 0,5 · other (baja, médico…): laborable sin teletrabajo
-// off, vacation y holiday no cuentan como laborables (reducen los días permitidos)
+// off, vacation, vacprev, hours y holiday no cuentan como laborables (reducen los días permitidos)
+// halfoff: medio día libre (cuenta medio laborable) · mix: medio teletrabajo + medio libre
+// El orden es el de los botones (3 × 3, agrupados por concepto); `combo` no tiene botón.
 const STATES = {
   tele: { label: 'Teletrabajo', name: 'teletrabajo' },
   half: { label: 'Medio día teletrabajo', name: 'medio día de teletrabajo' },
-  off: { label: 'Libre', name: 'día libre' },
+  off: { label: 'Libre disposición', name: 'libre disposición' },
+  halfoff: { label: 'Medio día libre', name: 'medio día de libre disposición' },
   vacation: { label: 'Vacaciones', name: 'vacaciones' },
+  vacprev: { label: 'Vacaciones año anterior', name: 'vacaciones del año anterior' },
+  hours: { label: 'Días con horas', name: 'día con horas' },
   holiday: { label: 'Festivo', name: 'festivo' },
   other: { label: 'Otros', name: 'otros (baja, médico…)' },
+  mix: { label: 'Medio día teletrabajo y medio día libre', name: 'medio día de teletrabajo y medio día libre', combo: true },
 };
-const NON_WORKING = ['off', 'vacation', 'holiday'];
+const NON_WORKING = ['off', 'vacation', 'vacprev', 'hours', 'holiday'];
 
 const ICONS = {
   // Tipos de día
   tele: '<path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>',
   half: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/>',
   off: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M9 15.5h6"/>',
+  halfoff: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/>',
+  mix: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" style="fill:var(--tele)" stroke="none"/><path d="M12 4a8 8 0 0 1 0 16z" style="fill:var(--off)" stroke="none"/>',
   vacation: '<circle cx="12" cy="12" r="3.8"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
+  vacprev: '<path d="M3.5 18h17"/><path d="M7 18a5 5 0 0 1 10 0"/><path d="M12 7.5v2.5M5.8 10.3l1.6 1.6M18.2 10.3l-1.6 1.6M3.5 14.5h2.2M18.3 14.5h2.2"/><path d="M9.5 21h5"/>',
+  hours: '<circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/>',
   holiday: '<path d="M5.5 21V3.5"/><path d="M5.5 4.5h12l-2.5 4 2.5 4h-12"/>',
   other: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/>',
   // Menú
@@ -33,6 +43,9 @@ const ICONS = {
   today: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="12" cy="15" r="1.6"/>',
   download: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5"/><path d="M4 17v1.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V17"/>',
   upload: '<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5"/><path d="M4 17v1.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V17"/>',
+  allow: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8.5 15h2M13.5 15h2"/>',
+  sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
+  counter: '<circle cx="12" cy="12" r="8"/><path d="M12 4v8l5.5 3"/><path d="M8 20.5h8"/>',
 };
 const icon = (name, size = 22) =>
   `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
@@ -142,7 +155,19 @@ function cleanDays(days) {
   return out;
 }
 
-let data = { days: cleanDays(load(STORAGE_KEY, {}).days) };
+// Días de vacaciones y de libre disposición: por defecto 21 y 4 al año; se pueden cambiar en años concretos.
+const ALLOW_DEFAULTS = { vacation: 21, off: 4 };
+function cleanAllowances(a) {
+  const num = (v, d) => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : d);
+  const years = {};
+  for (const [y, v] of Object.entries(a?.years || {})) {
+    if (/^\d{4}$/.test(y)) years[y] = { vacation: num(v?.vacation, ALLOW_DEFAULTS.vacation), off: num(v?.off, ALLOW_DEFAULTS.off) };
+  }
+  return { vacation: num(a?.vacation, ALLOW_DEFAULTS.vacation), off: num(a?.off, ALLOW_DEFAULTS.off), years };
+}
+const stored = load(STORAGE_KEY, {});
+let data = { days: cleanDays(stored.days), allowances: cleanAllowances(stored.allowances) };
+const allowance = (year, kind) => data.allowances.years[year]?.[kind] ?? data.allowances[kind];
 let brush = 'tele';
 const now = new Date();
 let view = { year: now.getFullYear(), quarter: Math.floor(now.getMonth() / 3) };
@@ -160,19 +185,26 @@ function effectiveState(key) {
 // ---------- Cálculo ----------
 
 function quarterStats(year, quarter) {
-  const s = { working: 0, tele: 0, off: 0, vacation: 0, holiday: 0, other: 0 };
+  const s = { working: 0, tele: 0, off: 0, vacation: 0, vacprev: 0, hours: 0, holiday: 0, other: 0 };
   const start = new Date(year, quarter * 3, 1);
   const end = new Date(year, quarter * 3 + 3, 1);
   for (const d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
     if (isWeekend(d)) continue;
     const state = effectiveState(dateKey(d.getFullYear(), d.getMonth(), d.getDate()));
     if (NON_WORKING.includes(state)) { s[state]++; continue; }
+    // Medio día libre: la otra mitad es laborable (y en «mix», esa mitad es de teletrabajo)
+    if (state === 'halfoff' || state === 'mix') {
+      s.working += 0.5;
+      if (state === 'mix') s.tele += 0.5;
+      continue;
+    }
     s.working++;
     if (state === 'tele') s.tele += 1;
     else if (state === 'half') s.tele += 0.5;
     else if (state === 'other') s.other++;
   }
   s.allowedExact = s.working * RATIO;
+  s.working = Math.round(s.working * 2) / 2;
   // Con medios días, el máximo se redondea hacia abajo al medio día más cercano
   s.allowed = Math.floor(s.allowedExact * 2 + 1e-9) / 2;
   s.remaining = s.allowed - s.tele;
@@ -208,13 +240,50 @@ function renderSummary(s) {
   $('progress-text').textContent =
     `${fmt(s.tele)} de ${fmt(s.allowed)} días usados (${s.pct.toFixed(0)}% actual) · 40% de ${s.working} laborables = ${s.allowedExact.toFixed(1).replace('.', ',')}`;
 
-  $('s-working').textContent = s.working;
+  $('s-working').textContent = fmt(s.working);
   $('s-allowed').textContent = fmt(s.allowed);
   $('s-tele').textContent = fmt(s.tele);
-  $('s-off').textContent = s.off;
-  $('s-vacation').textContent = s.vacation;
-  $('s-holiday').textContent = s.holiday;
-  $('s-other').textContent = s.other;
+  renderPending(view.year, view.quarter);
+}
+
+// Días pendientes de consumir en el año del trimestre que se ve:
+// · Vacaciones del año: allowance − vacaciones del año − «año anterior» usadas el año siguiente.
+// · Vacaciones año anterior: lo que quedó del año pasado; se pueden gastar hasta el 30 de junio.
+// · Libre disposición: allowance − libres (los medios días cuentan la mitad); caducan el 31 de diciembre.
+function balances(year) {
+  const used = { vacation: {}, vacprev: {}, off: {} };
+  const add = (k, y, n) => { used[k][y] = (used[k][y] || 0) + n; };
+  for (const [key, st] of Object.entries(data.days)) {
+    const y = key.slice(0, 4);
+    if (st === 'vacation') add('vacation', y, 1);
+    else if (st === 'vacprev') add('vacprev', y, 1);
+    else if (st === 'off') add('off', y, 1);
+    else if (st === 'halfoff' || st === 'mix') add('off', y, 0.5);
+  }
+  const vacLeft = (y) => allowance(y, 'vacation') - (used.vacation[y] || 0) - (used.vacprev[String(Number(y) + 1)] || 0);
+  const y = String(year);
+  return {
+    vacation: vacLeft(y),
+    prev: vacLeft(String(year - 1)),
+    off: allowance(y, 'off') - (used.off[y] || 0),
+  };
+}
+
+function renderPending(year, quarter) {
+  const b = balances(year);
+  $('pend-year').textContent = year;
+  const put = (id, v, text) => {
+    const el = $(id);
+    el.textContent = text ?? fmt(v);
+    el.classList.toggle('neg', v < 0);
+  };
+  put('p-vac', b.vacation);
+  put('p-off', b.off);
+  // Las del año anterior caducan el 30 de junio: en el 2.º semestre ya no se pueden usar
+  if (quarter >= 2) put('p-prev', 0, b.prev > 0 ? 'Caducadas' : '0');
+  else put('p-prev', b.prev);
+  $('p-vac').title = `${allowance(String(year), 'vacation')} días al año`;
+  $('p-off').title = `${allowance(String(year), 'off')} días al año`;
 }
 
 function renderMonths(year, quarter) {
@@ -315,14 +384,18 @@ $('months').addEventListener('click', (e) => {
   const cell = e.target.closest('button.day');
   if (!cell || cell.disabled) return;
   const key = cell.dataset.key;
-  // Tocar un día con el mismo tipo lo desmarca
-  if (effectiveState(key) === brush) delete data.days[key];
-  else data.days[key] = brush;
+  const cur = effectiveState(key);
+  let next;
+  if ((brush === 'half' && cur === 'halfoff') || (brush === 'halfoff' && cur === 'half')) next = 'mix';
+  else if (cur === 'mix' && (brush === 'half' || brush === 'halfoff')) next = brush === 'half' ? 'halfoff' : 'half'; // quita esa mitad
+  else next = cur === brush ? null : brush; // tocar un día con el mismo tipo lo desmarca
+  if (next) data.days[key] = next;
+  else delete data.days[key];
   persist();
   render();
 });
 
-$('brushes').innerHTML = Object.entries(STATES).map(([key, s]) =>
+$('brushes').innerHTML = Object.entries(STATES).filter(([, s]) => !s.combo).map(([key, s]) =>
   `<button class="brush ${key}" type="button" data-brush="${key}"><span class="brush-icon">${icon(key, 18)}</span><span class="brush-label">${s.label}</span></button>`).join('');
 
 $('brushes').addEventListener('click', (e) => {
@@ -359,6 +432,7 @@ $('quarter-current').addEventListener('click', goToday);
 
 const MENU = [
   { label: 'Ir al trimestre actual', icon: 'today', run: () => goToday() },
+  { label: 'Días de vacaciones y libre', icon: 'allow', run: () => openAllowanceSheet() },
   { label: 'Opciones de visualización', icon: 'palette', run: () => openDisplaySheet() },
   { label: 'Exportar calendario', icon: 'download', run: () => exportCalendar() },
   { label: 'Importar calendario', icon: 'upload', run: () => $('import-input').click() },
@@ -405,6 +479,10 @@ function calendarText() {
     '# Formato: fecha (AAAA-MM-DD) y tipo, separados por un tabulador.',
     `# Tipos: ${Object.values(STATES).map((s) => s.label).join(', ')}.`,
     '# Los festivos nacionales se marcan solos y no hace falta incluirlos.',
+    '',
+    '# Días de vacaciones y libre disposición al año (por defecto y años concretos)',
+    `DIAS\tdefecto\tvacaciones=${data.allowances.vacation}\tlibre=${data.allowances.off}`,
+    ...Object.entries(data.allowances.years).sort().map(([y, v]) => `DIAS\t${y}\tvacaciones=${v.vacation}\tlibre=${v.off}`),
   ];
   let section = '';
   for (const key of keys) {
@@ -439,31 +517,46 @@ async function exportCalendar() {
 
 // Acepta la etiqueta («Medio día teletrabajo») o la clave interna («half»), sin distinguir mayúsculas ni tildes
 const normalize = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
-const STATE_BY_NAME = Object.fromEntries(Object.entries(STATES).flatMap(([k, s]) => [[normalize(s.label), k], [k, k]]));
+const STATE_BY_NAME = {
+  ...Object.fromEntries(Object.entries(STATES).flatMap(([k, s]) => [[normalize(s.label), k], [k, k]])),
+  libre: 'off', // copias anteriores a «Libre disposición»
+};
 
 function parseCalendar(text) {
   // Copias antiguas en JSON
-  if (text.trim().startsWith('{')) return cleanDays(JSON.parse(text).days);
+  if (text.trim().startsWith('{')) {
+    const obj = JSON.parse(text);
+    return { days: cleanDays(obj.days), allowances: obj.allowances ? cleanAllowances(obj.allowances) : null };
+  }
   const days = {};
+  let allowances = null;
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     if (!line || line.startsWith('#')) continue;
+    const a = line.match(/^DIAS\s+(defecto|\d{4})\s+vacaciones=([\d.,]+)\s+libre=([\d.,]+)/i);
+    if (a) {
+      allowances ??= { years: {} };
+      const v = { vacation: Number(a[2].replace(',', '.')), off: Number(a[3].replace(',', '.')) };
+      if (a[1].toLowerCase() === 'defecto') Object.assign(allowances, v);
+      else allowances.years[a[1]] = v;
+      continue;
+    }
     const m = line.match(/^(\d{4}-\d{2}-\d{2})[\s\t;,|·-]+(.+)$/);
     const state = m && STATE_BY_NAME[normalize(m[2])];
     if (state) days[m[1]] = state;
   }
-  return days;
+  return { days, allowances: allowances ? cleanAllowances(allowances) : null };
 }
 
 $('import-input').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
   try {
-    const days = parseCalendar(await file.text());
+    const { days, allowances } = parseCalendar(await file.text());
     const count = Object.keys(days).length;
     if (!count) throw new Error('vacío');
     if (!confirm(`Se importarán ${count} días y se sustituirá el calendario actual de este dispositivo. ¿Continuar?`)) return;
-    data = { days };
+    data = { days, allowances: allowances ?? data.allowances };
     persist();
     render();
     toast(`Calendario importado (${count} días)`);
@@ -549,6 +642,113 @@ function openDisplaySheet() {
   draw();
 }
 
+// ---------- Días de vacaciones y libre disposición por año (menú ⋯) ----------
+
+function openAllowanceSheet() {
+  closeSheet();
+  const back = document.createElement('div');
+  back.className = 'sheet-backdrop';
+  document.body.append(back);
+  back.addEventListener('click', (e) => { if (e.target === back) closeSheet(); });
+  const changed = () => { persist(); render(); };
+
+  const draw = () => {
+    const a = data.allowances;
+    const years = Object.keys(a.years).sort();
+    back.innerHTML = `
+      <div class="sheet alw-sheet" role="dialog" aria-modal="true" aria-label="Días de vacaciones y libre">
+        <h2 class="sheet-title">Días de vacaciones y libre</h2>
+        <p class="muted small">Las vacaciones se gastan hasta el 30 de junio del año siguiente; los días de libre disposición caducan el 31 de diciembre.</p>
+        <p class="opt-label">Cada año</p>
+        <div class="alw-grid">
+          <label class="alw-field"><span>Vacaciones</span><input class="a-vac" type="text" inputmode="decimal" value="${fmt(a.vacation)}"></label>
+          <label class="alw-field"><span>Libre disposición</span><input class="a-off" type="text" inputmode="decimal" value="${fmt(a.off)}"></label>
+        </div>
+        <p class="opt-label">Años con otros días</p>
+        ${years.length ? `<div class="alw-years">${years.map((y) => `
+          <div class="alw-year" data-y="${y}">
+            <span class="alw-y">${y}</span>
+            <label class="alw-field"><span>Vacaciones</span><input class="y-vac" type="text" inputmode="decimal" value="${fmt(a.years[y].vacation)}"></label>
+            <label class="alw-field"><span>Libre</span><input class="y-off" type="text" inputmode="decimal" value="${fmt(a.years[y].off)}"></label>
+            <button class="alw-del" type="button" aria-label="Quitar ${y}">${icon('other', 18).replace('M12 8v8M8 12h8', 'M8 12h8')}</button>
+          </div>`).join('')}</div>` : '<p class="muted small">Ninguno: todos los años usan los días de arriba.</p>'}
+        <div class="alw-add">
+          <input class="a-year" type="text" inputmode="numeric" maxlength="4" placeholder="Año" value="${String(view.year)}" aria-label="Año">
+          <button class="text-btn a-add" type="button">${icon('allow', 16)} Añadir año</button>
+        </div>
+        <div class="body-actions"><button class="done-btn" type="button">Listo</button></div>
+      </div>`;
+    const num = (v) => { const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) && n >= 0 ? n : null; };
+    back.querySelector('.a-vac').addEventListener('input', (e) => { const n = num(e.target.value); if (n != null) { a.vacation = n; changed(); } });
+    back.querySelector('.a-off').addEventListener('input', (e) => { const n = num(e.target.value); if (n != null) { a.off = n; changed(); } });
+    back.querySelectorAll('.alw-year').forEach((row) => {
+      const y = row.dataset.y;
+      row.querySelector('.y-vac').addEventListener('input', (e) => { const n = num(e.target.value); if (n != null) { a.years[y].vacation = n; changed(); } });
+      row.querySelector('.y-off').addEventListener('input', (e) => { const n = num(e.target.value); if (n != null) { a.years[y].off = n; changed(); } });
+      row.querySelector('.alw-del').addEventListener('click', () => { delete a.years[y]; changed(); draw(); });
+    });
+    back.querySelector('.a-add').addEventListener('click', () => {
+      const y = back.querySelector('.a-year').value.trim();
+      if (!/^\d{4}$/.test(y)) return toast('Escribe un año de cuatro cifras.');
+      if (!a.years[y]) a.years[y] = { vacation: a.vacation, off: a.off };
+      changed();
+      draw();
+      back.querySelector(`.alw-year[data-y="${y}"] .y-vac`)?.focus();
+    });
+    back.querySelectorAll('input').forEach((i) => i.addEventListener('focus', () => i.select()));
+    back.querySelector('.done-btn').addEventListener('click', closeSheet);
+  };
+  draw();
+}
+
+// ---------- Aviso de novedades (al abrir la app tras una actualización) ----------
+// Sale en cada apertura hasta que se marca «No volver a mostrar»; la siguiente versión vuelve a avisar.
+const SEEN_KEY = 'teletrabajo:seenVersion';
+const CHANGELOG = {
+  '1.1.0': [
+    ['halfoff', 'Medio día libre', 'Consume medio día de libre disposición y medio laborable. Se puede combinar con medio día de teletrabajo en el mismo día.'],
+    ['vacprev', 'Vacaciones año anterior', 'Para gastar, hasta el 30 de junio, las vacaciones que te quedaron del año pasado.'],
+    ['hours', 'Días con horas', 'No cuentan como laborables, igual que las vacaciones.'],
+    ['off', '«Libre» pasa a «Libre disposición»', 'Los nueve tipos de día, ordenados por concepto.'],
+    ['counter', 'Días pendientes', 'El resumen muestra los días que te quedan de vacaciones, del año anterior y de libre disposición.'],
+    ['allow', 'Días por año', 'En el menú ⋯ puedes cambiar los días de vacaciones (21) y de libre disposición (4), también para años concretos.'],
+  ],
+};
+
+function maybeShowUpdates(next = () => {}) {
+  const notes = CHANGELOG[APP_VERSION];
+  const seen = load(SEEN_KEY, null);
+  if (!notes || seen === APP_VERSION) return next();
+  // Instalación nueva (sin nada apuntado): no hay novedades que contar
+  if (seen == null && !Object.keys(data.days).length) {
+    save(SEEN_KEY, APP_VERSION);
+    return next();
+  }
+  const back = document.createElement('div');
+  back.className = 'whatsnew-backdrop';
+  back.innerHTML = `
+    <div class="whatsnew" role="dialog" aria-modal="true" aria-labelledby="wn-title">
+      <div class="wn-hero">
+        <span class="wn-spark">${icon('sparkle', 40)}</span>
+        <h2 id="wn-title">¡Nueva versión!</h2>
+        <span class="wn-pill">Versión ${APP_VERSION}</span>
+      </div>
+      <ul class="wn-list">${notes.map(([ic, title, text]) => `
+        <li class="${ic}"><span class="wn-icon">${icon(ic, 20)}</span><span><b>${title}</b><span>${text}</span></span></li>`).join('')}
+      </ul>
+      <div class="wn-footer">
+        <label class="no-more"><input type="checkbox" id="wn-no-more"> No volver a mostrar</label>
+        <button class="done-btn" type="button" id="wn-ok">Aceptar</button>
+      </div>
+    </div>`;
+  document.body.append(back);
+  back.querySelector('#wn-ok').addEventListener('click', () => {
+    if (back.querySelector('#wn-no-more').checked) save(SEEN_KEY, APP_VERSION);
+    back.classList.add('closing');
+    setTimeout(() => { back.remove(); next(); }, 220);
+  });
+}
+
 // ---------- Pantalla de inicio ----------
 
 $('enter-btn').addEventListener('click', () => {
@@ -558,7 +758,7 @@ $('enter-btn').addEventListener('click', () => {
   setTimeout(() => {
     $('splash').remove();
     body.classList.remove('booting', 'entering');
-    maybeShowInstallHint();
+    maybeShowUpdates(maybeShowInstallHint);
   }, 820);
 });
 
