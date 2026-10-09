@@ -449,9 +449,15 @@ function openGroupMenu(btn) {
   pop.innerHTML = GROUPS[btn.dataset.group].map((k) => `
     <button class="menu-item ${k} ${brush === k ? 'on' : ''}" role="menuitem" data-k="${k}">${icon(k, 20)}<span>${STATES[k].label}</span></button>`).join('');
   document.body.append(pop);
+  // Bajo el botón y siempre dentro de la pantalla (los botones de la izquierda lo empujarían fuera)
   const r = btn.getBoundingClientRect();
-  pop.style.top = `${r.bottom + 6}px`;
-  pop.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
+  const w = pop.offsetWidth;
+  const h = pop.offsetHeight;
+  const left = Math.min(Math.max(8, r.left), window.innerWidth - w - 8);
+  const below = r.bottom + 6 + h <= window.innerHeight - 8;
+  pop.style.left = `${Math.max(8, left)}px`;
+  pop.style.right = 'auto';
+  pop.style.top = `${below ? r.bottom + 6 : Math.max(8, r.top - h - 6)}px`;
   pop.querySelectorAll('[data-k]').forEach((b) => b.addEventListener('click', () => {
     setBrush(b.dataset.k);
     closeGroupMenu();

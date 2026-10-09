@@ -838,7 +838,9 @@ main {
 .day.medical .icon, .day.sick .icon { color: var(--other); }
 .group-btn { position: relative; }
 .brush-more { position: absolute; top: 3px; right: 4px; display: grid; color: var(--muted); opacity: .8; }
-.group-menu { z-index: 60; min-width: 220px; }
+.group-menu { z-index: 60; min-width: 220px; max-width: calc(100vw - 16px); }
+.group-menu .menu-item { white-space: nowrap; -webkit-appearance: none; appearance: none; color: var(--text); font-size: 16px; }
+.group-menu .menu-item span { overflow: hidden; text-overflow: ellipsis; }
 .group-menu .menu-item.nonexp svg { color: var(--nonexp); }
 .group-menu .menu-item.medical svg, .group-menu .menu-item.sick svg, .group-menu .menu-item.other svg { color: var(--other); }
 .group-menu .menu-item.on { background: var(--surface-2); font-weight: 600; }
