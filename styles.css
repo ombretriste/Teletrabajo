@@ -868,3 +868,10 @@ main {
 .nx-stats dt { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .nx-stats dd { margin: 4px 0 0; font-size: 22px; font-weight: 300; }
 .nx-stats dd.neg { color: var(--danger); }
+
+/* Menús emergentes de los grupos: color de cada opción */
+.group-menu .menu-item.tele svg, .group-menu .menu-item.half svg { color: var(--tele); }
+.group-menu .menu-item.off svg, .group-menu .menu-item.halfoff svg { color: var(--off); }
+.group-menu .menu-item.vacation svg { color: var(--vacation); }
+.group-menu .menu-item.vacprev svg { color: var(--vacprev); }
+.wn-list .half .wn-icon { --c: var(--tele); }

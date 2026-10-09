@@ -11,14 +11,15 @@ const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 // tele: suma 1 al teletrabajo · half: suma 0,5 · other (baja, médico…): laborable sin teletrabajo
 // off, vacation, vacprev, hours y holiday no cuentan como laborables (reducen los días permitidos)
 // halfoff: medio día libre (cuenta medio laborable) · mix: medio teletrabajo + medio libre
-// El orden es el de los botones (3 × 3, agrupados por concepto); `combo` no tiene botón.
+// El orden es el de los botones; los de un mismo `group` comparten botón (menú emergente) y
+// `combo` no tiene botón. Quedan 6 botones en 2 filas de 3.
 const STATES = {
-  tele: { label: 'Teletrabajo', name: 'teletrabajo' },
-  half: { label: 'Medio día teletrabajo', name: 'medio día de teletrabajo' },
-  off: { label: 'Libre disposición', name: 'libre disposición' },
-  halfoff: { label: 'Medio día libre', name: 'medio día de libre disposición' },
-  vacation: { label: 'Vacaciones', name: 'vacaciones' },
-  vacprev: { label: 'Vacaciones año anterior', name: 'vacaciones del año anterior' },
+  tele: { label: 'Teletrabajo', name: 'teletrabajo', group: 'tele' },
+  half: { label: 'Medio día teletrabajo', name: 'medio día de teletrabajo', group: 'tele' },
+  off: { label: 'Libre disposición', name: 'libre disposición', group: 'off' },
+  halfoff: { label: 'Medio día libre', name: 'medio día de libre disposición', group: 'off' },
+  vacation: { label: 'Vacaciones', name: 'vacaciones', group: 'vacation' },
+  vacprev: { label: 'Vacaciones año anterior', name: 'vacaciones del año anterior', group: 'vacation' },
   hours: { label: 'Días con horas', name: 'día con horas' },
   holiday: { label: 'Festivo', name: 'festivo' },
   // Grupo del botón «Otros» (se elige en un menú emergente)
@@ -31,7 +32,8 @@ const STATES = {
 const NON_WORKING = ['off', 'vacation', 'vacprev', 'hours', 'nonexp', 'holiday'];
 // Médico, Bajas y Otros: cuentan como laborables, sin teletrabajo
 const WORKING_OTHER = ['medical', 'sick', 'other'];
-const OTHER_GROUP = Object.keys(STATES).filter((k) => STATES[k].group === 'other');
+const GROUPS = {};
+for (const [k, s] of Object.entries(STATES)) if (s.group) (GROUPS[s.group] ??= []).push(k);
 
 const ICONS = {
   // Tipos de día
@@ -414,21 +416,29 @@ $('months').addEventListener('click', (e) => {
   render();
 });
 
-let groupChoice = 'other'; // opción elegida en el botón «Otros»
+// Cada grupo muestra en su botón la opción elegida (por defecto, la que da nombre al grupo)
+const groupChoice = Object.fromEntries(Object.entries(GROUPS).map(([g, ks]) => [g, ks.includes(g) ? g : ks[0]]));
 const brushInner = (key) => `<span class="brush-icon">${icon(key, 18)}</span><span class="brush-label">${STATES[key].label}</span>`;
-$('brushes').innerHTML = Object.entries(STATES).filter(([k, s]) => !s.combo && (!s.group || k === 'other')).map(([key]) => key === 'other'
-  ? `<button class="brush group-btn other" type="button" data-group="other" aria-haspopup="menu">${brushInner('other')}<span class="brush-more">${icon('chevron', 14)}</span></button>`
-  : `<button class="brush ${key}" type="button" data-brush="${key}">${brushInner(key)}</button>`).join('');
+const groupBtnInner = (key) => `${brushInner(key)}<span class="brush-more">${icon('chevron', 14)}</span>`;
+const seenGroups = new Set();
+$('brushes').innerHTML = Object.entries(STATES).filter(([, s]) => !s.combo).map(([key, s]) => {
+  if (!s.group) return `<button class="brush ${key}" type="button" data-brush="${key}">${brushInner(key)}</button>`;
+  if (seenGroups.has(s.group)) return '';
+  seenGroups.add(s.group);
+  const show = groupChoice[s.group];
+  return `<button class="brush group-btn ${show}" type="button" data-group="${s.group}" aria-haspopup="menu">${groupBtnInner(show)}</button>`;
+}).join('');
 
 function setBrush(key) {
   brush = key;
-  const groupBtn = document.querySelector('.group-btn');
-  if (STATES[key].group) {
-    groupChoice = key;
-    groupBtn.className = `brush group-btn ${key}`;
-    groupBtn.innerHTML = `${brushInner(key)}<span class="brush-more">${icon('chevron', 14)}</span>`;
+  const g = STATES[key].group;
+  if (g) {
+    groupChoice[g] = key;
+    const btn = document.querySelector(`.group-btn[data-group="${g}"]`);
+    btn.className = `brush group-btn ${key}`;
+    btn.innerHTML = groupBtnInner(key);
   }
-  document.querySelectorAll('.brush').forEach((b) => b.classList.toggle('active', b.dataset.brush === key || (b === groupBtn && STATES[key].group)));
+  document.querySelectorAll('.brush').forEach((b) => b.classList.toggle('active', b.dataset.brush === key || (!!g && b.dataset.group === g)));
 }
 
 function openGroupMenu(btn) {
@@ -436,7 +446,7 @@ function openGroupMenu(btn) {
   const pop = document.createElement('div');
   pop.className = 'menu group-menu';
   pop.setAttribute('role', 'menu');
-  pop.innerHTML = OTHER_GROUP.map((k) => `
+  pop.innerHTML = GROUPS[btn.dataset.group].map((k) => `
     <button class="menu-item ${k} ${brush === k ? 'on' : ''}" role="menuitem" data-k="${k}">${icon(k, 20)}<span>${STATES[k].label}</span></button>`).join('');
   document.body.append(pop);
   const r = btn.getBoundingClientRect();
@@ -806,7 +816,8 @@ const CHANGELOG = {
     ['hours', 'Días con horas', 'No cuentan como laborables, igual que las vacaciones.'],
     ['nonexp', 'Días que no caducan', 'Los días que ganas se suman con el + del menú ⋯ y se gastan al marcarlos. No cuentan como laborables y nunca caducan.'],
     ['other', 'Botón «Otros» ampliado', 'Al pulsarlo eliges entre Días que no caducan, Médico, Bajas u Otros. Médico, Bajas y Otros cuentan como laborables.'],
-    ['off', '«Libre» pasa a «Libre disposición»', 'Los tipos de día, ordenados por concepto.'],
+    ['half', 'Seis botones agrupados', 'Teletrabajo, Libre disposición, Vacaciones y Otros abren un menú con sus variantes (medio día, año anterior…). El botón muestra la que tengas elegida.'],
+    ['off', '«Libre» pasa a «Libre disposición»', 'Es el mismo día libre de antes, con un nombre más preciso.'],
     ['counter', 'Días pendientes', 'El resumen muestra los días que te quedan de vacaciones, del año anterior, de libre disposición y los que no caducan.'],
     ['allow', 'Días por año', 'En el menú ⋯ puedes cambiar los días de vacaciones (21) y de libre disposición (4), también para años concretos.'],
   ],
