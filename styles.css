@@ -877,3 +877,9 @@ main {
 .group-menu .menu-item.vacation svg { color: var(--vacation); }
 .group-menu .menu-item.vacprev svg { color: var(--vacprev); }
 .wn-list .half .wn-icon { --c: var(--tele); }
+
+/* iPhone (pantalla completa): iOS difumina una franja justo debajo de la barra de estado (hora,
+   batería). Se baja la barra superior para que el título y los iconos queden fuera. */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .topbar { padding-top: calc(env(safe-area-inset-top) + 14px); }
+}
