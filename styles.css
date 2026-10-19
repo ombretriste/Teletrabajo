@@ -884,3 +884,41 @@ main {
   .topbar { padding-top: calc(env(safe-area-inset-top) + 14px); }
   .app { --top-h: calc(72px + env(safe-area-inset-top)); } /* la barra crece lo mismo: el botón no toca la línea */
 }
+
+/* ---------- Invítame a un café ---------- */
+.donate-pill {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px auto 6px;
+  padding: 8px 18px 8px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: .01em;
+}
+.donate-pill:active { transform: scale(.97); }
+.donate-icon {
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 50%;
+  color: var(--accent);
+}
+.donate-sheet { max-width: 380px; align-items: center; text-align: center; padding: 22px 18px 14px; border-radius: 22px; border-bottom: 1px solid var(--line); animation: pop-in .22s ease; }
+.donate-hero {
+  width: 68px; height: 68px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+.donate-go { display: block; width: 100%; padding: 12px; text-align: center; text-decoration: none; margin-top: 4px; }
+.donate-later { border: 0; background: transparent; color: var(--muted); padding: 6px; }

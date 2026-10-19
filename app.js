@@ -1,7 +1,9 @@
 'use strict';
 
 // Versión de la app (se ve en la pantalla de inicio). Arreglos y ajustes: 1.0.x; novedades: 1.x.0.
-const APP_VERSION = '1.1.2';
+const APP_VERSION = '1.2.0';
+// Página de donaciones (Ko-fi). Mientras esté vacía, el botón «Invítame a un café» no se muestra.
+const DONATE_URL = 'https://ko-fi.com/omtapps';
 const STORAGE_KEY = 'teletrabajo:v1';
 const DISPLAY_KEY = 'teletrabajo:display';
 const RATIO = 0.4;
@@ -810,6 +812,29 @@ function openNonexpSheet() {
     back.querySelector('.done-btn').addEventListener('click', closeSheet);
   };
   draw();
+}
+
+// ---------- Invítame a un café ----------
+function openDonateSheet() {
+  closeSheet();
+  const back = document.createElement('div');
+  back.className = 'sheet-backdrop blur center';
+  back.innerHTML = `
+    <div class="sheet donate-sheet" role="dialog" aria-modal="true" aria-label="Invítame a un café">
+      <span class="donate-hero">${document.querySelector('.donate-icon').innerHTML.replace('width="20" height="20"', 'width="34" height="34"')}</span>
+      <h2 class="sheet-title">¿Te ahorra tiempo?</h2>
+      <p class="muted small">Up to 40% es gratis y sin anuncios. Si te resulta útil y quieres apoyar que siga mejorando, puedes invitarme a un café. Cualquier cantidad ayuda.</p>
+      <a class="done-btn donate-go" href="${DONATE_URL}" target="_blank" rel="noopener">Invitar a un café</a>
+      <button class="text-btn donate-later" type="button">Ahora no</button>
+    </div>`;
+  back.addEventListener('click', (e) => { if (e.target === back) closeSheet(); });
+  back.querySelector('.donate-later').addEventListener('click', closeSheet);
+  back.querySelector('.donate-go').addEventListener('click', () => setTimeout(closeSheet, 300));
+  document.body.append(back);
+}
+if (DONATE_URL) {
+  $('donate-btn').hidden = false;
+  $('donate-btn').addEventListener('click', openDonateSheet);
 }
 
 // ---------- Aviso de novedades (al abrir la app tras una actualización) ----------
