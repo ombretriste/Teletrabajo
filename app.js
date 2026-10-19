@@ -1,7 +1,7 @@
 'use strict';
 
 // Versión de la app (se ve en la pantalla de inicio). Arreglos y ajustes: 1.0.x; novedades: 1.x.0.
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 // Página de donaciones (Ko-fi). Mientras esté vacía, el botón «Invítame a un café» no se muestra.
 const DONATE_URL = 'https://ko-fi.com/omtapps';
 const STORAGE_KEY = 'teletrabajo:v1';
@@ -817,6 +817,9 @@ function openNonexpSheet() {
 // ---------- Invítame a un café ----------
 function openDonateSheet() {
   closeSheet();
+  // En el iPhone con la app instalada, iOS abre los enlaces en un navegador interno donde el
+  // pago de Ko-fi falla: se intenta abrir Safari y, si no se puede, se explica cómo pasar a él.
+  const iosApp = isIOS && isStandalone();
   const back = document.createElement('div');
   back.className = 'sheet-backdrop blur center';
   back.innerHTML = `
@@ -824,12 +827,34 @@ function openDonateSheet() {
       <span class="donate-hero">${document.querySelector('.donate-icon').innerHTML.replace('width="20" height="20"', 'width="34" height="34"')}</span>
       <h2 class="sheet-title">¿Te ahorra tiempo?</h2>
       <p class="muted small">Up to 40% es gratis y sin anuncios. Si te resulta útil y quieres apoyar que siga mejorando, puedes invitarme a un café. Cualquier cantidad ayuda.</p>
-      <a class="done-btn donate-go" href="${DONATE_URL}" target="_blank" rel="noopener">Invitar a un café</a>
+      <a class="done-btn donate-go" href="${DONATE_URL}" target="_blank" rel="noopener">${iosApp ? 'Abrir en Safari' : 'Invitar a un café'}</a>
+      ${iosApp ? `<p class="muted small donate-tip">Si se abre dentro de la app, pulsa el icono de Safari (abajo a la derecha) para hacer el pago allí.</p>
+      <button class="text-btn donate-copy" type="button">Copiar enlace</button>` : ''}
       <button class="text-btn donate-later" type="button">Ahora no</button>
     </div>`;
   back.addEventListener('click', (e) => { if (e.target === back) closeSheet(); });
   back.querySelector('.donate-later').addEventListener('click', closeSheet);
-  back.querySelector('.donate-go').addEventListener('click', () => setTimeout(closeSheet, 300));
+  back.querySelector('.donate-go').addEventListener('click', (e) => {
+    if (!iosApp) return void setTimeout(closeSheet, 300);
+    e.preventDefault();
+    // Atajo de iOS para abrir directamente en Safari; si no responde, enlace normal
+    let left = false;
+    const onHide = () => { left = true; };
+    document.addEventListener('visibilitychange', onHide, { once: true });
+    location.href = DONATE_URL.replace(/^https:\/\//, 'x-safari-https://');
+    setTimeout(() => {
+      document.removeEventListener('visibilitychange', onHide);
+      if (!left && document.visibilityState === 'visible') window.open(DONATE_URL, '_blank', 'noopener');
+    }, 1200);
+  });
+  back.querySelector('.donate-copy')?.addEventListener('click', async (e) => {
+    try {
+      await navigator.clipboard.writeText(DONATE_URL);
+      e.target.textContent = 'Enlace copiado: pégalo en Safari';
+    } catch {
+      e.target.textContent = DONATE_URL.replace('https://', '');
+    }
+  });
   document.body.append(back);
 }
 if (DONATE_URL) {
