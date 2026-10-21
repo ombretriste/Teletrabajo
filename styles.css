@@ -904,6 +904,7 @@ main {
   letter-spacing: .01em;
 }
 .donate-pill:active { transform: scale(.97); }
+.donate-cta { color: var(--accent); font-weight: 600; }
 .donate-icon {
   width: 34px; height: 34px;
   display: grid; place-items: center;
