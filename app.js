@@ -1,11 +1,12 @@
 'use strict';
 
 // Versión de la app (se ve en la pantalla de inicio). Arreglos y ajustes: 1.0.x; novedades: 1.x.0.
-const APP_VERSION = '1.2.2';
+const APP_VERSION = '1.3.0';
 // Página de donaciones (Ko-fi). Mientras esté vacía, el botón «Invítame a un café» no se muestra.
 const DONATE_URL = 'https://ko-fi.com/omtapps';
 const STORAGE_KEY = 'teletrabajo:v1';
 const DISPLAY_KEY = 'teletrabajo:display';
+const SYNC_KEY = 'teletrabajo:sync';
 const RATIO = 0.4;
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const WEEKDAYS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -61,6 +62,9 @@ const ICONS = {
   allow: '<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8.5 15h2M13.5 15h2"/>',
   sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
   counter: '<circle cx="12" cy="12" r="8"/><path d="M12 4v8l5.5 3"/><path d="M8 20.5h8"/>',
+  cloud: '<path d="M7 18a4.5 4.5 0 0 1-.5-9A6 6 0 0 1 18 9.5a4 4 0 0 1-.5 8.5z"/><path d="M12 11v5M9.5 13.5L12 11l2.5 2.5"/>',
+  refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+  logout: '<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 16l-4-4 4-4M6 12h10"/>',
 };
 const icon = (name, size = 22) =>
   `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
@@ -189,8 +193,37 @@ let brush = 'tele';
 const now = new Date();
 let view = { year: now.getFullYear(), quarter: Math.floor(now.getMonth() / 3) };
 
+// Para sincronizar: cuándo cambió cada día (también los desmarcados), los días por año y los que no caducan
+function cleanStamps(s) {
+  const at = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : 0);
+  const days = {};
+  for (const [k, v] of Object.entries(s?.days || {})) if (/^\d{4}-\d{2}-\d{2}$/.test(k) && at(v)) days[k] = at(v);
+  return { days, allowances: at(s?.allowances), nonexp: at(s?.nonexp) };
+}
+let stamps = cleanStamps(stored.stamps);
+let snap = structuredClone(data);
+const resetSnap = () => { snap = structuredClone(data); };
+
+// Marca con la hora lo que ha cambiado desde la última vez que se guardó
+function stampChanges() {
+  const now = Date.now();
+  for (const k of new Set([...Object.keys(data.days), ...Object.keys(snap.days)])) {
+    if (data.days[k] !== snap.days[k]) stamps.days[k] = now;
+  }
+  if (JSON.stringify(data.allowances) !== JSON.stringify(snap.allowances)) stamps.allowances = now;
+  if (data.nonexp !== snap.nonexp) stamps.nonexp = now;
+  resetSnap();
+}
+
+// Guarda en el dispositivo sin marcar cambios (p. ej. lo que llega de la nube)
+function store() {
+  if (!save(STORAGE_KEY, { ...data, stamps })) toast('No se han podido guardar los datos en este dispositivo.');
+}
+// Tras un cambio hecho aquí: marca lo cambiado, guarda y lo sube a la nube
 function persist() {
-  if (!save(STORAGE_KEY, data)) toast('No se han podido guardar los datos en este dispositivo.');
+  stampChanges();
+  store();
+  queueSync();
 }
 
 function effectiveState(key) {
@@ -232,6 +265,7 @@ function quarterStats(year, quarter) {
 // ---------- Render ----------
 
 const $ = (id) => document.getElementById(id);
+const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 function render() {
   const { year, quarter } = view;
@@ -508,6 +542,7 @@ const MENU = [
   { label: 'Ir al trimestre actual', icon: 'today', run: () => goToday() },
   { label: 'Días de vacaciones y libre', icon: 'allow', run: () => openAllowanceSheet() },
   { label: 'Días que no caducan', icon: 'nonexp', run: () => openNonexpSheet() },
+  { label: 'Sincronización en la nube', icon: 'cloud', run: () => openSyncSheet() },
   { label: 'Opciones de visualización', icon: 'palette', run: () => openDisplaySheet() },
   { label: 'Exportar calendario', icon: 'download', run: () => exportCalendar() },
   { label: 'Importar calendario', icon: 'upload', run: () => $('import-input').click() },
@@ -862,10 +897,282 @@ if (DONATE_URL) {
   $('donate-btn').addEventListener('click', openDonateSheet);
 }
 
+// ---------- Sincronización en la nube (menú ⋯) ----------
+// Cuenta con usuario y contraseña (como en las otras apps: crearla pide la clave de
+// registro) y cifrado de extremo a extremo: el calendario se cifra aquí (PBKDF2 + AES-256-GCM)
+// antes de subirse; el servidor solo guarda un bloque ilegible. Las claves derivan con sal propia
+// («upto40-…»): mismo usuario que en las otras apps, cuenta distinta.
+// Se fusiona día a día: de cada día gana el cambio más reciente (también al desmarcarlo); los días
+// por año y los que no caducan, igual. El aspecto (modo y fondo) es de cada dispositivo.
+const SYNC_API = 'api/sync';
+const SYNC_EVERY_MS = 3 * 60 * 1000; // sincronización periódica mientras la app está abierta
+const PBKDF2_ITERATIONS = 310000;
+const TOMBSTONE_MS = 365 * 24 * 3600 * 1000; // los días desmarcados se recuerdan un año
+const utf8 = new TextEncoder();
+
+let sync = load(SYNC_KEY, null); // { username, user, auth, key, at }
+const saveSync = () => { if (sync) save(SYNC_KEY, sync); else { try { localStorage.removeItem(SYNC_KEY); } catch (_) {} } };
+let pushTimer = null;
+let syncBusy = false;
+let syncAgain = false;
+let syncError = '';
+
+const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+const sha256hex = async (text) => hex(await crypto.subtle.digest('SHA-256', utf8.encode(text)));
+const toB64 = (buf) => {
+  const bytes = new Uint8Array(buf);
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+};
+const fromB64 = (str) => Uint8Array.from(atob(str), (ch) => ch.charCodeAt(0));
+
+async function deriveAccount(username, password) {
+  const u = username.trim().toLowerCase();
+  const base = await crypto.subtle.importKey('raw', utf8.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = (salt) => crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: utf8.encode(salt), iterations: PBKDF2_ITERATIONS }, base, 256);
+  // Dos claves independientes: una para identificarse y otra (que nunca sale de aquí) para cifrar.
+  const [auth, key] = await Promise.all([bits(`upto40-auth:${u}`), bits(`upto40-enc:${u}`)]);
+  return { username: u, user: await sha256hex(`upto40-user:${u}`), auth: hex(auth), key: toB64(key) };
+}
+
+const aesKey = (account) => crypto.subtle.importKey('raw', fromB64(account.key), 'AES-GCM', false, ['encrypt', 'decrypt']);
+async function encryptData(obj, account = sync) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await aesKey(account), utf8.encode(JSON.stringify(obj)));
+  return `${toB64(iv)}.${toB64(ct)}`;
+}
+async function decryptData(blob, account = sync) {
+  const [iv, ct] = blob.split('.');
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromB64(iv) }, await aesKey(account), fromB64(ct));
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
+async function syncCall(action, extra = {}, account = sync) {
+  const body = JSON.stringify({ action, user: account.user, auth: account.auth, ...extra });
+  const res = await fetch(SYNC_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+    // Al salir de la app, que la subida termine aunque se cierre (Safari lo limita a 64 KB).
+    keepalive: document.hidden && body.length < 60000,
+  });
+  const out = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(out.error || `http ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  return out;
+}
+
+const syncErrorText = (err) => ({
+  auth: 'Usuario o contraseña incorrectos.',
+  exists: 'Ese nombre de usuario ya existe. Elige otro o entra con tu cuenta.',
+  'too-many': 'Demasiados intentos. Espera 15 minutos.',
+  invite: 'La clave de registro no es correcta.',
+  'not-configured': 'Falta conectar la base de datos en Vercel (Storage → Upstash Redis).',
+  OperationError: 'No se han podido descifrar los datos de la nube.',
+}[err.message || err.name] || 'No se pudo conectar con la nube. Se reintentará.');
+
+// Lo que se sube: el calendario y las horas de cada cambio
+const cloudPayload = () => ({ days: data.days, allowances: data.allowances, nonexp: data.nonexp, stamps });
+const cleanCloud = (c) => ({ days: cleanDays(c?.days), allowances: cleanAllowances(c?.allowances), nonexp: cleanNonexp(c?.nonexp), stamps: cleanStamps(c?.stamps) });
+
+// Fusión: de cada día, la versión con la hora más reciente (un día sin marcar también cuenta).
+// Empate (p. ej. datos de antes de la sincronización): manda la nube, salvo que allí no esté ese día.
+function mergeCalendars(a, b) {
+  const days = {};
+  const at = {};
+  const keys = new Set([...Object.keys(a.days), ...Object.keys(a.stamps.days), ...Object.keys(b.days), ...Object.keys(b.stamps.days)]);
+  const old = Date.now() - TOMBSTONE_MS;
+  for (const k of keys) {
+    const ta = a.stamps.days[k] || 0;
+    const tb = b.stamps.days[k] || 0;
+    const src = ta > tb || (ta === tb && !(k in b.days)) ? a : b;
+    const t = Math.max(ta, tb);
+    if (src.days[k]) days[k] = src.days[k];
+    if (t && (src.days[k] || t > old)) at[k] = t;
+  }
+  const pick = (f) => (a.stamps[f] > b.stamps[f] ? a : b);
+  return {
+    days,
+    allowances: pick('allowances').allowances,
+    nonexp: pick('nonexp').nonexp,
+    stamps: { days: at, allowances: Math.max(a.stamps.allowances, b.stamps.allowances), nonexp: Math.max(a.stamps.nonexp, b.stamps.nonexp) },
+  };
+}
+// Forma comparable (sin orden) de lo que se sincroniza
+const sorted = (o) => Object.entries(o).sort(([p], [q]) => (p < q ? -1 : 1));
+const syncSig = (x) => JSON.stringify([
+  sorted(x.days), sorted(x.stamps.days), x.allowances.vacation, x.allowances.off, sorted(x.allowances.years),
+  x.nonexp, x.stamps.allowances, x.stamps.nonexp,
+]);
+
+// Hay cambios locales: se suben en unos segundos (se agrupan)
+function queueSync() {
+  if (!sync) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => syncNow(), 1500);
+}
+
+async function syncNow({ interactive = false } = {}) {
+  if (!sync) return false;
+  if (syncBusy) { syncAgain = true; return false; }
+  syncBusy = true;
+  clearTimeout(pushTimer);
+  try {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const remote = await syncCall('pull');
+      const cloud = remote.blob ? cleanCloud(await decryptData(remote.blob)) : null;
+      const mine = cloudPayload();
+      const merged = cloud ? mergeCalendars(mine, cloud) : mine;
+      // Lo nuevo de la nube se aplica aquí (sin marcarlo como cambio local)
+      if (syncSig(merged) !== syncSig(mine)) {
+        data = { days: merged.days, allowances: merged.allowances, nonexp: merged.nonexp };
+        stamps = merged.stamps;
+        resetSnap();
+        store();
+        render();
+      }
+      // Y lo nuevo de aquí se sube
+      if (cloud && syncSig(merged) === syncSig(cloud)) break;
+      try {
+        await syncCall('push', { blob: await encryptData(cloudPayload()), baseRev: remote.rev });
+        break;
+      } catch (err) {
+        if (err.status !== 409) throw err; // otro dispositivo subió justo antes: se vuelve a fusionar
+      }
+    }
+    sync.at = Date.now();
+    syncError = '';
+    saveSync();
+    return true;
+  } catch (err) {
+    console.warn(err);
+    syncError = syncErrorText(err);
+    if (interactive) toast(syncError);
+    return false;
+  } finally {
+    syncBusy = false;
+    if (syncAgain) { syncAgain = false; queueSync(); }
+  }
+}
+
+function syncStatusText() {
+  if (!sync) return 'Desactivada';
+  if (syncError) return syncError;
+  if (!sync.at) return 'Pendiente';
+  const mins = Math.round((Date.now() - sync.at) / 60000);
+  return `Al día · ${mins < 1 ? 'hace un momento' : mins < 60 ? `hace ${mins} min` : new Date(sync.at).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}`;
+}
+
+function openSyncSheet() {
+  closeSheet();
+  const back = document.createElement('div');
+  back.className = 'sheet-backdrop';
+  document.body.append(back);
+  back.addEventListener('click', (e) => { if (e.target === back) closeSheet(); });
+  const sheet = document.createElement('div');
+  sheet.className = 'sheet sync-sheet';
+  sheet.setAttribute('role', 'dialog');
+  sheet.setAttribute('aria-modal', 'true');
+  sheet.setAttribute('aria-label', 'Sincronización en la nube');
+  back.append(sheet);
+  const title = '<h2 class="sheet-title">Sincronización en la nube</h2>';
+
+  const renderConnected = () => {
+    sheet.innerHTML = `${title}
+      <div class="sync-status ${syncError ? 'bad' : 'ok'}">${icon('cloud', 22)}<span><b>Conectado como ${esc(sync.username)}</b><small class="s-status">${esc(syncStatusText())}</small></span></div>
+      <p class="muted small">Tu calendario se cifra en este dispositivo antes de subirse. Entra con el mismo usuario y contraseña en tu otro móvil, tablet u ordenador para tenerlo también allí. Si cambias días en dos sitios a la vez, se juntan los cambios: de cada día se queda el último.</p>
+      <p class="muted small">El modo y el fondo (Opciones de visualización) son de cada dispositivo.</p>
+      <div class="row-btns">
+        <button type="button" class="done-btn" data-now>${icon('refresh', 17)} Sincronizar ahora</button>
+        <button type="button" class="ghost-btn danger" data-logout>${icon('logout', 17)} Desconectar</button>
+      </div>
+      <div class="body-actions"><button class="text-btn sync-done" type="button" data-close>Listo</button></div>`;
+  };
+
+  const renderForm = (mode = 'login') => {
+    sheet.innerHTML = `${title}
+      <p class="muted small">Para tener tu calendario en varios dispositivos. Se cifra aquí con tu contraseña antes de subirse: nadie más puede leerlo, ni siquiera el servidor. <b>Si olvidas la contraseña no se puede recuperar.</b></p>
+      <div class="seg" role="group" aria-label="Cuenta">
+        <button type="button" data-mode="login" class="${mode === 'login' ? 'on' : ''}">Ya tengo cuenta</button>
+        <button type="button" data-mode="create" class="${mode === 'create' ? 'on' : ''}">Crear cuenta</button>
+      </div>
+      <label class="fld"><span>Usuario</span><input id="s-user" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="40" /></label>
+      <label class="fld"><span>Contraseña</span><input id="s-pass" type="password" autocomplete="${mode === 'create' ? 'new-password' : 'current-password'}" maxlength="128" /></label>
+      ${mode === 'create' ? `
+      <label class="fld"><span>Repite la contraseña</span><input id="s-pass2" type="password" autocomplete="new-password" maxlength="128" /></label>
+      <label class="fld"><span>Clave de registro</span><input id="s-invite" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="64" placeholder="La misma que en UnderCTRL" /></label>` : ''}
+      <p class="form-error" id="s-error" role="alert"></p>
+      <div class="body-actions sync-actions">
+        <button type="button" class="text-btn sync-done" data-close>Ahora no</button>
+        <button type="button" class="done-btn" id="s-go">${mode === 'create' ? 'Crear cuenta' : 'Entrar'}</button>
+      </div>`;
+    const q = (sel) => sheet.querySelector(sel);
+    q('#s-go').addEventListener('click', async () => {
+      const err = q('#s-error');
+      const username = q('#s-user').value.trim();
+      const password = q('#s-pass').value;
+      if (username.length < 3) return void (err.textContent = 'El usuario debe tener al menos 3 caracteres.');
+      if (password.length < 8) return void (err.textContent = 'La contraseña debe tener al menos 8 caracteres.');
+      if (mode === 'create' && password !== q('#s-pass2').value) return void (err.textContent = 'Las contraseñas no coinciden.');
+      if (mode === 'create' && !q('#s-invite').value.trim()) return void (err.textContent = 'Introduce la clave de registro.');
+      const btn = q('#s-go');
+      btn.disabled = true;
+      btn.textContent = 'Un momento…';
+      err.textContent = '';
+      try {
+        const account = await deriveAccount(username, password);
+        if (mode === 'create') await syncCall('register', { invite: q('#s-invite').value.trim() }, account);
+        else await syncCall('pull', {}, account); // comprueba usuario y contraseña
+        sync = { ...account, at: null };
+        saveSync();
+        const ok = await syncNow({ interactive: true });
+        if (ok) toast(mode === 'create' ? 'Cuenta creada. Tu calendario ya está en la nube' : 'Conectado. Calendario sincronizado');
+        renderConnected();
+      } catch (e) {
+        console.warn(e);
+        err.textContent = syncErrorText(e);
+        btn.disabled = false;
+        btn.textContent = mode === 'create' ? 'Crear cuenta' : 'Entrar';
+      }
+    });
+  };
+
+  sheet.addEventListener('click', async (e) => {
+    if (e.target.closest('[data-close]')) return closeSheet();
+    const m = e.target.closest('[data-mode]');
+    if (m) return renderForm(m.dataset.mode);
+    if (e.target.closest('[data-now]')) {
+      sheet.querySelector('.s-status').textContent = 'Sincronizando…';
+      await syncNow({ interactive: true });
+      renderConnected();
+    }
+    if (e.target.closest('[data-logout]')) {
+      if (!confirm('¿Desconectar este dispositivo? El calendario se queda en él, pero dejará de sincronizarse.')) return;
+      sync = null;
+      saveSync();
+      renderForm();
+      toast('Sincronización desactivada en este dispositivo');
+    }
+  });
+  if (sync) renderConnected();
+  else renderForm();
+}
+
+// Mientras la app está abierta, trae cada poco lo cambiado en otros dispositivos; y al volver a ella
+setInterval(() => { if (!document.hidden) syncNow(); }, SYNC_EVERY_MS);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncNow(); });
+
 // ---------- Aviso de novedades (al abrir la app tras una actualización) ----------
 // Sale en cada apertura hasta que se marca «No volver a mostrar»; la siguiente versión vuelve a avisar.
 const SEEN_KEY = 'teletrabajo:seenVersion';
 const CHANGELOG = {
+  '1.3.0': [
+    ['cloud', 'Sincronización en la nube', 'En el menú ⋯ puedes entrar con tu usuario (la cuenta se crea con la misma clave de registro que en las otras apps) y tener el mismo calendario en el móvil, la tablet y el ordenador. Se cifra en tu dispositivo antes de subirse.'],
+  ],
   '1.1.0': [
     ['halfoff', 'Medio día libre', 'Consume medio día de libre disposición y medio laborable. Se puede combinar con medio día de teletrabajo en el mismo día.'],
     ['vacprev', 'Vacaciones año anterior', 'Para gastar, hasta el 30 de junio, las vacaciones que te quedaron del año pasado.'],
@@ -996,6 +1303,7 @@ document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: fals
 
 applyDisplay();
 render();
+syncNow();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

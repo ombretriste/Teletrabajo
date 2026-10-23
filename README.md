@@ -2,7 +2,7 @@
 
 *by OmT Finance*
 
-Versión **1.2.2** (se muestra en la pantalla de inicio). Las correcciones y ajustes suben el último número (1.0.1); las novedades, el del medio (1.1.0).
+Versión **1.3.0** (se muestra en la pantalla de inicio). Las correcciones y ajustes suben el último número (1.0.1); las novedades, el del medio (1.1.0).
 
 App web instalable (PWA) para llevar el control de los días de teletrabajo por trimestre, con un límite del 40% de los días laborables.
 
@@ -25,9 +25,15 @@ App web instalable (PWA) para llevar el control de los días de teletrabajo por 
 - **Días permitidos** = 40% de los laborables, redondeado hacia abajo al medio día.
 - **Disponibles** = permitidos − teletrabajo marcado.
 
-En el menú ⋯ están: ir al trimestre actual, **opciones de visualización** (modo oscuro, claro o automático y cuatro fondos: Glaciar, Coral, Menta y Ámbar) y **exportar/importar calendario**.
+En el menú ⋯ están: ir al trimestre actual, **sincronización en la nube**, **opciones de visualización** (modo oscuro, claro o automático y cuatro fondos: Glaciar, Coral, Menta y Ámbar) y **exportar/importar calendario**.
 
-Los datos se guardan en el propio dispositivo (`localStorage`). Para pasarlos a otro dispositivo, usa exportar e importar calendario.
+Los datos se guardan en el propio dispositivo (`localStorage` `teletrabajo:v1`) y, si se activa, en la nube cifrados (`u40:acct:*` en Upstash). Sin cuenta, para pasarlos a otro dispositivo usa exportar e importar calendario.
+
+### Sincronización en la nube
+
+Menú ⋯ → Sincronización en la nube: cuenta con usuario y contraseña (crearla pide la misma clave de registro que UnderCTRL, PayCTRL y TaskCTRL). El calendario se cifra en el dispositivo (PBKDF2 + AES-256-GCM) antes de subirse a `api/sync`; el servidor solo guarda un bloque ilegible. Se fusiona día a día: de cada día gana el cambio más reciente (también al desmarcarlo), igual que los días por año y los que no caducan. El modo y el fondo son de cada dispositivo.
+
+Requiere conectar **Upstash Redis** al proyecto en Vercel (Storage → Upstash Redis, la misma base de datos que las otras apps) y volver a desplegar. Abrir `/api/sync` en el navegador dice si está configurado (`configured: true`).
 
 ### Formato del calendario exportado
 
