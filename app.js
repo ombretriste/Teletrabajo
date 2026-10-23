@@ -1,7 +1,7 @@
 'use strict';
 
 // Versión de la app (se ve en la pantalla de inicio). Arreglos y ajustes: 1.0.x; novedades: 1.x.0.
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.3.1';
 // Página de donaciones (Ko-fi). Mientras esté vacía, el botón «Invítame a un café» no se muestra.
 const DONATE_URL = 'https://ko-fi.com/omtapps';
 const STORAGE_KEY = 'teletrabajo:v1';
@@ -1104,7 +1104,7 @@ function openSyncSheet() {
       <label class="fld"><span>Contraseña</span><input id="s-pass" type="password" autocomplete="${mode === 'create' ? 'new-password' : 'current-password'}" maxlength="128" /></label>
       ${mode === 'create' ? `
       <label class="fld"><span>Repite la contraseña</span><input id="s-pass2" type="password" autocomplete="new-password" maxlength="128" /></label>
-      <label class="fld"><span>Clave de registro</span><input id="s-invite" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="64" placeholder="La misma que en UnderCTRL" /></label>` : ''}
+      <label class="fld"><span>Clave de registro</span><input id="s-invite" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="64" placeholder="Clave administrador" /></label>` : ''}
       <p class="form-error" id="s-error" role="alert"></p>
       <div class="body-actions sync-actions">
         <button type="button" class="text-btn sync-done" data-close>Ahora no</button>
