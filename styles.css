@@ -421,7 +421,7 @@ main {
   justify-content: center;
   gap: 8px;
   /* En el iPhone, más pegado al borde inferior (solo parte de la zona de la barra de inicio) */
-  padding: 0 16px calc(env(safe-area-inset-bottom) * 0.35);
+  padding: 0 16px calc(env(safe-area-inset-bottom) * 0.12);
   /* Sin cuadro: se ve el fondo; solo flotan el trimestre y las flechas */
   background: transparent;
   pointer-events: none;
