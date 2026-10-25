@@ -421,13 +421,17 @@ main {
   justify-content: space-between;
   gap: 12px;
   padding: 0 16px env(safe-area-inset-bottom);
-  /* Como la barra de UnderCTRL: casi transparente, deja ver el fondo */
-  background: rgba(7, 16, 31, 0.22);
-  -webkit-backdrop-filter: blur(8px) saturate(140%);
-  backdrop-filter: blur(8px) saturate(140%);
-  border-top: 1px solid var(--line);
+  /* Sin cuadro: se ve el fondo; solo flotan el trimestre y las flechas */
+  background: transparent;
+  pointer-events: none;
 }
-:root[data-theme="light"] .quarterbar { background: rgba(245, 249, 255, 0.3); }
+.quarterbar > * { pointer-events: auto; }
+.quarterbar .icon-btn {
+  background: var(--surface);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.quarterbar .quarter-title { flex: 0 1 auto; padding: 6px 18px; text-shadow: 0 1px 8px var(--bg), 0 0 2px var(--bg); }
 .quarter-title {
   flex: 1;
   display: flex;
