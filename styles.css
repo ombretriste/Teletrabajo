@@ -891,10 +891,11 @@ main {
 
 /* iPhone (pantalla completa): iOS difumina una franja de unos 20 px justo debajo de la barra de
    estado (hora, batería). Con 2 px de margen el título se veía cortado por arriba y con 14 px
-   quedaba demasiado bajo: 8 px es el término medio (el texto empieza unos 19 px bajo la hora). */
+   quedaba demasiado bajo. El usuario lo prefiere lo más arriba posible: 3 px (el texto empieza
+   unos 14 px bajo la hora). */
 @supports (padding-top: env(safe-area-inset-top)) {
-  .topbar { padding-top: calc(env(safe-area-inset-top) + 8px); }
-  .app { --top-h: calc(52px + env(safe-area-inset-top)); }
+  .topbar { padding-top: calc(env(safe-area-inset-top) + 3px); }
+  .app { --top-h: calc(46px + env(safe-area-inset-top)); }
 }
 /* Botón ⋯ algo más pequeño: su centro y el del título «Up to 40%» quedan a la misma altura */
 .topbar .icon-btn { width: 38px; height: 38px; flex-basis: 38px; }
