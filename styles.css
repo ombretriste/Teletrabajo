@@ -418,9 +418,10 @@ main {
   height: var(--bottom-h);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 16px env(safe-area-inset-bottom);
+  justify-content: center;
+  gap: 8px;
+  /* En el iPhone, más pegado al borde inferior (solo parte de la zona de la barra de inicio) */
+  padding: 0 16px calc(env(safe-area-inset-bottom) * 0.35);
   /* Sin cuadro: se ve el fondo; solo flotan el trimestre y las flechas */
   background: transparent;
   pointer-events: none;
@@ -431,7 +432,7 @@ main {
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
 }
-.quarterbar .quarter-title { flex: 0 1 auto; padding: 6px 18px; text-shadow: 0 1px 8px var(--bg), 0 0 2px var(--bg); }
+.quarterbar .quarter-title { flex: 0 1 auto; min-width: 150px; padding: 6px 10px; text-shadow: 0 1px 8px var(--bg), 0 0 2px var(--bg); }
 .quarter-title {
   flex: 1;
   display: flex;

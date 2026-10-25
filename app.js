@@ -1,7 +1,7 @@
 'use strict';
 
 // Versión de la app (se ve en la pantalla de inicio). Arreglos y ajustes: 1.0.x; novedades: 1.x.0.
-const APP_VERSION = '1.3.5';
+const APP_VERSION = '1.3.6';
 // Página de donaciones (Ko-fi). Mientras esté vacía, el botón «Invítame a un café» no se muestra.
 const DONATE_URL = 'https://ko-fi.com/omtapps';
 const STORAGE_KEY = 'teletrabajo:v1';
@@ -1303,7 +1303,8 @@ document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: fals
 
 // ---------- Difuminado del contenido sobre la barra del trimestre (como en UnderCTRL) ----------
 function updateFade() {
-  const barTop = $('prev').closest('.quarterbar').getBoundingClientRect().top;
+  // Hasta un poco por encima de las flechas y del trimestre (en el iPhone van más abajo que la barra)
+  const barTop = $('prev').getBoundingClientRect().top - 10;
   for (const el of document.querySelectorAll('main > :not(.brushes)')) {
     el.style.setProperty('--fade-b', `${Math.round(barTop - el.getBoundingClientRect().top)}px`);
   }
