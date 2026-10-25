@@ -959,3 +959,14 @@ main {
 .sync-actions { align-items: center; gap: 8px; }
 .sync-done { border: 0; background: transparent; color: var(--muted); padding: 10px 12px; font-size: 14px; }
 .done-btn:disabled { opacity: .5; }
+
+/* Como en UnderCTRL: la barra del trimestre no tiene fondo y el contenido se difumina hasta
+   desaparecer antes de llegar a ella; el trimestre queda superpuesto sobre el fondo de la app.
+   --fade-b (borde superior de la barra, en coordenadas de cada bloque) lo calcula app.js al desplazar. */
+main { padding-bottom: 28px; }
+/* Cada bloque por separado (no <main> entero): así la tarjeta fija de tipos de día sigue difuminando lo que pasa por debajo */
+main > :not(.brushes) {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(var(--fade-b, 100000px) - 44px), transparent calc(var(--fade-b, 100000px) + 2px));
+  mask-image: linear-gradient(to bottom, #000 calc(var(--fade-b, 100000px) - 44px), transparent calc(var(--fade-b, 100000px) + 2px));
+}
+.quarterbar .quarter-title { text-shadow: none; }
