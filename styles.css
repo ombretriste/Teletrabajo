@@ -889,13 +889,16 @@ main {
 .group-menu .menu-item.vacprev svg { color: var(--vacprev); }
 .wn-list .half .wn-icon { --c: var(--tele); }
 
-/* iPhone (pantalla completa): barra superior estrecha, con el título y el botón ⋯ justo debajo
-   de la barra de estado (hora, batería). Antes se bajaba 14 px por el difuminado que iOS pone
-   bajo la barra de estado; si vuelve a verse borroso, subir ese margen. */
+/* iPhone (pantalla completa): iOS difumina una franja de unos 20 px justo debajo de la barra de
+   estado (hora, batería). El título y el botón ⋯ van por debajo de ella (con 2 px de margen se
+   veían cortados por arriba), en una barra algo más estrecha que antes (60 px en vez de 72). */
 @supports (padding-top: env(safe-area-inset-top)) {
-  .topbar { padding-top: calc(env(safe-area-inset-top) + 2px); }
-  .app { --top-h: calc(52px + env(safe-area-inset-top)); }
+  .topbar { padding-top: calc(env(safe-area-inset-top) + 14px); }
+  .app { --top-h: calc(60px + env(safe-area-inset-top)); }
 }
+/* Botón ⋯ algo más pequeño: su centro y el del título «Up to 40%» quedan a la misma altura */
+.topbar .icon-btn { width: 38px; height: 38px; flex-basis: 38px; }
+.topbar .brand { line-height: 1; }
 
 /* ---------- Invítame a un café ---------- */
 .donate-pill {
