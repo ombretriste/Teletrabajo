@@ -208,7 +208,7 @@ body.entering .sp-top, body.entering .sp-bottom { animation: splash-content .35s
 /* ---------- App ---------- */
 .app {
   --top-h: calc(58px + env(safe-area-inset-top));
-  --bottom-h: calc(68px + env(safe-area-inset-bottom));
+  --bottom-h: calc(62px + env(safe-area-inset-bottom) * 0.7); /* trimestre y flechas pegados abajo (en el iPhone, sobre la rayita de inicio) */
   max-width: 1100px;
   margin: 0 auto;
   padding-bottom: calc(var(--bottom-h) + 16px);
@@ -420,8 +420,7 @@ main {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  /* En el iPhone, más pegado al borde inferior (solo parte de la zona de la barra de inicio) */
-  padding: 0 16px calc(env(safe-area-inset-bottom) * 0.12);
+  padding: 0 16px;
   /* Sin cuadro: se ve el fondo; solo flotan el trimestre y las flechas */
   background: transparent;
   pointer-events: none;
