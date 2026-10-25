@@ -889,11 +889,12 @@ main {
 .group-menu .menu-item.vacprev svg { color: var(--vacprev); }
 .wn-list .half .wn-icon { --c: var(--tele); }
 
-/* iPhone (pantalla completa): iOS difumina una franja justo debajo de la barra de estado (hora,
-   batería). Se baja la barra superior para que el título y los iconos queden fuera. */
+/* iPhone (pantalla completa): barra superior estrecha, con el título y el botón ⋯ justo debajo
+   de la barra de estado (hora, batería). Antes se bajaba 14 px por el difuminado que iOS pone
+   bajo la barra de estado; si vuelve a verse borroso, subir ese margen. */
 @supports (padding-top: env(safe-area-inset-top)) {
-  .topbar { padding-top: calc(env(safe-area-inset-top) + 14px); }
-  .app { --top-h: calc(72px + env(safe-area-inset-top)); } /* la barra crece lo mismo: el botón no toca la línea */
+  .topbar { padding-top: calc(env(safe-area-inset-top) + 2px); }
+  .app { --top-h: calc(52px + env(safe-area-inset-top)); }
 }
 
 /* ---------- Invítame a un café ---------- */
