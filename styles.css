@@ -888,16 +888,15 @@ main {
 .group-menu .menu-item.vacprev svg { color: var(--vacprev); }
 .wn-list .half .wn-icon { --c: var(--tele); }
 
-/* iPhone (pantalla completa): iOS difumina una franja de unos 20 px justo debajo de la barra de
-   estado (hora, batería). Con 2 px de margen el título se veía cortado por arriba y con 14 px
-   quedaba demasiado bajo. El usuario lo prefiere lo más arriba posible: 3 px (el texto empieza
-   unos 14 px bajo la hora). */
+/* iPhone (pantalla completa): iOS difumina una franja justo debajo de la barra de estado (hora,
+   batería). Pruebas en el iPhone: con el texto a ~14 px de la hora se ve difuminado por arriba;
+   a ~19 px, limpio. Queda a ~17 px, lo más arriba posible sin que se corte. */
 @supports (padding-top: env(safe-area-inset-top)) {
-  .topbar { padding-top: calc(env(safe-area-inset-top) + 3px); }
-  .app { --top-h: calc(46px + env(safe-area-inset-top)); }
+  .topbar { padding-top: calc(env(safe-area-inset-top) + 11px); padding-bottom: 7px; }
+  .app { --top-h: calc(52px + env(safe-area-inset-top)); }
 }
-/* Botón ⋯ algo más pequeño: su centro y el del título «Up to 40%» quedan a la misma altura */
-.topbar .icon-btn { width: 38px; height: 38px; flex-basis: 38px; }
+/* Botón ⋯ más pequeño, centrado con el título «Up to 40%» y separado de la línea de debajo */
+.topbar .icon-btn { width: 34px; height: 34px; flex-basis: 34px; }
 .topbar .brand { line-height: 1; }
 
 /* ---------- Invítame a un café ---------- */
