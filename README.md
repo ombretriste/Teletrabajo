@@ -2,13 +2,13 @@
 
 *by OmT Finance*
 
-Versión **1.3.13** (se muestra en la pantalla de inicio). Las correcciones y ajustes suben el último número (1.0.1); las novedades, el del medio (1.1.0).
+Versión **1.3.14** (se muestra en la pantalla de inicio). Las correcciones y ajustes suben el último número (1.0.1); las novedades, el del medio (1.1.0).
 
 App web instalable (PWA) para llevar el control de los días de teletrabajo por trimestre, con un límite del 40% de los días laborables.
 
 ## Funcionamiento
 
-- Pantalla de inicio con el logo; al pulsar **Entrar** se pasa a los calendarios.
+- Pantalla de inicio sin botón: el logo se ve nítido un instante (el arco se dibuja) y se pasa sola a los calendarios con una transición de cristal difuminado (≈2,9 s en total).
 - Siempre en vertical: en Android la app instalada se bloquea en vertical; en iPhone, que no permite bloquearla, se muestra un aviso para girar el móvil.
 - Calendario de cada trimestre (Q1: ene–mar, Q2: abr–jun, Q3: jul–sep, Q4: oct–dic), que se cambia desde la barra inferior. Al tocar el nombre del trimestre se vuelve al actual.
 - Festivos nacionales de España marcados automáticamente (incluido Viernes Santo, que se calcula cada año).
