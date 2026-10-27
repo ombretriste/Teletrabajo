@@ -1,5 +1,5 @@
 // Cambia la versión al modificar archivos para que los móviles descarguen la nueva versión
-const CACHE = 'teletrabajo-v35';
+const CACHE = 'teletrabajo-v36';
 const ASSETS = [
   './',
   'index.html',
