@@ -1,7 +1,7 @@
 'use strict';
 
 // Versión de la app (se ve en la pantalla de inicio). Arreglos y ajustes: 1.0.x; novedades: 1.x.0.
-const APP_VERSION = '1.3.16';
+const APP_VERSION = '1.3.17';
 // Página de donaciones (Ko-fi). Mientras esté vacía, el botón «Invítame a un café» no se muestra.
 const DONATE_URL = 'https://ko-fi.com/omtapps';
 const STORAGE_KEY = 'teletrabajo:v1';
@@ -69,7 +69,7 @@ const ICONS = {
 const icon = (name, size = 22) =>
   `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
 
-// Logo de Up to 40%: anillo fino, anillo discontinuo, arco del 40 % y casa de líneas finas
+// Logo de Up to 40%: anillo fino, anillo discontinuo, arco de 240° (como en las demás apps de OmT) y casa de líneas finas
 let logoCount = 0;
 function logoSVG(size) {
   const id = `u40-g${logoCount++}`;
@@ -82,8 +82,8 @@ function logoSVG(size) {
       </defs>
       <circle cx="60" cy="60" r="52" stroke="url(#${id})" stroke-width="1.2" opacity=".55"/>
       <circle cx="60" cy="60" r="42" stroke="url(#${id})" stroke-width=".8" stroke-dasharray="2 5" opacity=".6"/>
-      <path class="logo-arc" pathLength="1" d="M60 8 A52 52 0 0 1 90.56 102.07" stroke="url(#${id})" stroke-width="3"/>
-      <circle class="logo-dot" cx="90.56" cy="102.07" r="3" fill="#5aa9ff" stroke="none"/>
+      <path class="logo-arc" pathLength="1" d="M60 8 A52 52 0 1 1 14.97 86" stroke="url(#${id})" stroke-width="3"/>
+      <circle class="logo-dot" cx="14.97" cy="86" r="3" fill="#5aa9ff" stroke="none"/>
       <path d="M38 62 L60 42 L82 62" stroke="url(#${id})" stroke-width="1.8"/>
       <path d="M44 57 V80 H76 V57" stroke="url(#${id})" stroke-width="1.8"/>
       <path d="M55 80 V69 H65 V80" stroke="url(#${id})" stroke-width="1.8"/>
