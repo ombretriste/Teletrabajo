@@ -990,3 +990,9 @@ main > :not(.brushes) {
   mask-image: linear-gradient(to bottom, #000 calc(var(--fade-b, 100000px) - 44px), transparent calc(var(--fade-b, 100000px) + 2px));
 }
 .quarterbar .quarter-title { text-shadow: none; }
+
+/* Hoja de Información (menú ⋯) */
+.info-sheet { border-radius: 22px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 400px; text-align: center; }
+.info-sheet p { margin: 0; line-height: 1.45; }
+.info-sheet .sheet-title { margin: 0; }
+.info-actions { display: flex; justify-content: center; width: 100%; margin-top: 6px; }

@@ -1,7 +1,7 @@
 'use strict';
 
 // Versión de la app (se ve en la pantalla de inicio). Arreglos y ajustes: 1.0.x; novedades: 1.x.0.
-const APP_VERSION = '1.4.2';
+const APP_VERSION = '1.5.0';
 // Página de donaciones (Ko-fi). Mientras esté vacía, el botón «Invítame a un café» no se muestra.
 const DONATE_URL = 'https://ko-fi.com/omtapps';
 const STORAGE_KEY = 'teletrabajo:v1';
@@ -39,6 +39,7 @@ const GROUPS = {};
 for (const [k, s] of Object.entries(STATES)) if (s.group) (GROUPS[s.group] ??= []).push(k);
 
 const ICONS = {
+  info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r=".9" fill="currentColor" stroke="none"/>',
   // Tipos de día
   tele: '<path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>',
   half: '<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/>',
@@ -552,6 +553,7 @@ const MENU = [
   { label: 'Opciones de visualización', path: '/visualizacion', icon: 'palette', run: () => openDisplaySheet() },
   { label: 'Exportar calendario', path: '/exportar', icon: 'download', run: () => exportCalendar() },
   { label: 'Importar calendario', path: '/importar', icon: 'upload', run: () => $('import-input').click() },
+  { label: 'Información', path: '/informacion', icon: 'info', run: () => openInfoSheet() },
 ];
 
 function openMenu() {
@@ -688,6 +690,24 @@ $('import-input').addEventListener('change', async (e) => {
     e.target.value = '';
   }
 });
+
+function openInfoSheet() {
+  closeSheet();
+  const back = document.createElement('div');
+  back.className = 'sheet-backdrop center';
+  back.innerHTML = `
+    <div class="sheet info-sheet" role="dialog" aria-modal="true" aria-label="Información">
+      <span class="install-logo">${logoSVG(56)}</span>
+      <h2 class="sheet-title">Up to 40%</h2>
+      <p class="small muted">Versión ${APP_VERSION} · by OmT Finance</p>
+      <p class="small">Calendario por trimestres para no pasarte del 40 % de teletrabajo, con los festivos nacionales y la cuenta de vacaciones, libre disposición y días que no caducan.</p>
+      <p class="small muted">Tus datos se guardan en este dispositivo. Con la sincronización en la nube activada, se cifran en tu dispositivo antes de subirse.</p>
+      <div class="info-actions"><button type="button" class="done-btn" data-close>Cerrar</button></div>
+    </div>`;
+  document.body.append(back);
+  back.addEventListener('click', (e) => { if (e.target === back) closeSheet(); });
+  back.querySelector('[data-close]').addEventListener('click', closeSheet);
+}
 
 // ---------- Opciones de visualización (modo y fondo) ----------
 
