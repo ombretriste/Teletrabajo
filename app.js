@@ -1,7 +1,7 @@
 'use strict';
 
 // Versión de la app (se ve en la pantalla de inicio). Arreglos y ajustes: 1.0.x; novedades: 1.x.0.
-const APP_VERSION = '1.3.17';
+const APP_VERSION = '1.4.0';
 // Página de donaciones (Ko-fi). Mientras esté vacía, el botón «Invítame a un café» no se muestra.
 const DONATE_URL = 'https://ko-fi.com/omtapps';
 const STORAGE_KEY = 'teletrabajo:v1';
@@ -496,6 +496,7 @@ function openGroupMenu(btn) {
   pop.style.top = `${below ? r.bottom + 6 : Math.max(8, r.top - h - 6)}px`;
   pop.querySelectorAll('[data-k]').forEach((b) => b.addEventListener('click', () => {
     setBrush(b.dataset.k);
+    track(`/tipo/${b.dataset.k}`);
     closeGroupMenu();
   }));
 }
@@ -509,6 +510,7 @@ $('brushes').addEventListener('click', (e) => {
     return document.querySelector('.group-menu') ? closeGroupMenu() : openGroupMenu(btn);
   }
   setBrush(btn.dataset.brush);
+  track(`/tipo/${btn.dataset.brush}`);
 });
 document.addEventListener('click', (e) => { if (!e.target.closest('.group-menu')) closeGroupMenu(); });
 window.addEventListener('scroll', closeGroupMenu, { passive: true });
@@ -538,14 +540,18 @@ $('quarter-current').addEventListener('click', goToday);
 
 // ---------- Menú ⋯ ----------
 
+// Uso de la app en Vercel Analytics: es una sola página, así que cada función se cuenta como una
+// página virtual. Solo se envía el nombre de la función, nunca los datos del calendario.
+const track = (path) => { try { window.va?.('pageview', { path }); } catch (_) { /* sin analítica */ } };
+
 const MENU = [
-  { label: 'Ir al trimestre actual', icon: 'today', run: () => goToday() },
-  { label: 'Días de vacaciones y libre', icon: 'allow', run: () => openAllowanceSheet() },
-  { label: 'Días que no caducan', icon: 'nonexp', run: () => openNonexpSheet() },
-  { label: 'Sincronización en la nube', icon: 'cloud', run: () => openSyncSheet() },
-  { label: 'Opciones de visualización', icon: 'palette', run: () => openDisplaySheet() },
-  { label: 'Exportar calendario', icon: 'download', run: () => exportCalendar() },
-  { label: 'Importar calendario', icon: 'upload', run: () => $('import-input').click() },
+  { label: 'Ir al trimestre actual', path: '/trimestre-actual', icon: 'today', run: () => goToday() },
+  { label: 'Días de vacaciones y libre', path: '/dias-por-ano', icon: 'allow', run: () => openAllowanceSheet() },
+  { label: 'Días que no caducan', path: '/dias-no-caducan', icon: 'nonexp', run: () => openNonexpSheet() },
+  { label: 'Sincronización en la nube', path: '/sincronizacion', icon: 'cloud', run: () => openSyncSheet() },
+  { label: 'Opciones de visualización', path: '/visualizacion', icon: 'palette', run: () => openDisplaySheet() },
+  { label: 'Exportar calendario', path: '/exportar', icon: 'download', run: () => exportCalendar() },
+  { label: 'Importar calendario', path: '/importar', icon: 'upload', run: () => $('import-input').click() },
 ];
 
 function openMenu() {
@@ -554,6 +560,7 @@ function openMenu() {
     `<button class="menu-item" role="menuitem" data-i="${i}">${icon(m.icon, 20)}<span>${m.label}</span></button>`).join('');
   menu.querySelectorAll('.menu-item').forEach((b) => b.addEventListener('click', () => {
     closeMenu();
+    track(MENU[b.dataset.i].path);
     MENU[b.dataset.i].run();
   }));
   const r = $('menu-btn').getBoundingClientRect();
@@ -852,6 +859,7 @@ function openNonexpSheet() {
 // ---------- Invítame a un café ----------
 function openDonateSheet() {
   closeSheet();
+  track('/cafe');
   // En el iPhone con la app instalada, iOS abre los enlaces en un navegador interno donde el
   // pago de Ko-fi falla: se intenta abrir Safari y, si no se puede, se explica cómo pasar a él.
   const iosApp = isIOS && isStandalone();

@@ -1,5 +1,5 @@
 // Cambia la versión al modificar archivos para que los móviles descarguen la nueva versión
-const CACHE = 'teletrabajo-v38';
+const CACHE = 'teletrabajo-v39';
 const ASSETS = [
   './',
   'index.html',
@@ -27,7 +27,8 @@ self.addEventListener('activate', (event) => {
 
 // Red primero (para recibir actualizaciones); caché si no hay conexión
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET' || new URL(event.request.url).pathname.includes('/api/')) return;
+  const path = new URL(event.request.url).pathname;
+  if (event.request.method !== 'GET' || path.includes('/api/') || path.startsWith('/_vercel/')) return;
   event.respondWith(
     fetch(event.request)
       .then((response) => {
