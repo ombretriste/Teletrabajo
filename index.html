@@ -15,15 +15,7 @@
   <meta name="apple-mobile-web-app-title" content="Up to 40%" />
   <meta name="color-scheme" content="dark light" />
   <link rel="stylesheet" href="styles.css" />
-  <script>
-    // Aplica tema y fondo antes de pintar (evita un destello del tema equivocado)
-    try {
-      var d = JSON.parse(localStorage.getItem('teletrabajo:display') || '{}');
-      var light = d.theme === 'light' || (d.theme !== 'dark' && matchMedia('(prefers-color-scheme: light)').matches);
-      document.documentElement.dataset.theme = light ? 'light' : 'dark';
-      document.documentElement.dataset.wall = d.wall || 'glaciar';
-    } catch (e) {}
-  </script>
+  <script src="boot.js"></script>
 </head>
 <body class="booting">
   <!-- Pantalla de inicio -->
@@ -117,8 +109,6 @@
   <input type="file" id="import-input" accept=".txt,text/plain,.json,application/json" hidden />
 
   <script src="app.js"></script>
-  <!-- Vercel Web Analytics: sin cookies; solo visitas y las funciones que se abren -->
-  <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
   <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

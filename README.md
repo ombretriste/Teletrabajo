@@ -2,7 +2,7 @@
 
 *by OmT Finance*
 
-Versión **1.5.0** (se muestra en la pantalla de inicio). Las correcciones y ajustes suben el último número (1.0.1); las novedades, el del medio (1.1.0).
+Versión **1.5.1** (se muestra en la pantalla de inicio). Las correcciones y ajustes suben el último número (1.0.1); las novedades, el del medio (1.1.0).
 
 App web instalable (PWA) para llevar el control de los días de teletrabajo por trimestre, con un límite del 40% de los días laborables.
 
@@ -49,6 +49,10 @@ Archivo de texto plano (`.txt`), una línea por día marcado con la fecha y el t
 Al importar se aceptan también espacios, `;` o `,` como separador, y el tipo sin tildes ni mayúsculas.
 
 - **Invítame a un café**: al final de la pantalla, un botón discreto lleva a la página de donaciones (ko-fi.com/omtapps).
+
+## Seguridad
+
+- **Política de seguridad (CSP) y cabeceras** en `vercel.json`, como en las demás apps de OmT: solo se ejecuta código de la propia app (nada en línea: lo que iba en `index.html` está en `boot.js`), solo se conecta a su propio servidor, no se puede incrustar en otra web (`frame-ancestors 'none'`), `nosniff`, `no-referrer` y sin permiso de cámara, micrófono ni ubicación.
 
 ## Analítica
 
